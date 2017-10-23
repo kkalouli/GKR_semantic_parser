@@ -3,7 +3,9 @@
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.8"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/semantic.graph"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/Syn2Sem"/>
 	<classpathentry kind="lib" path="/Users/kkalouli/Documents/libraries/parsers/stanford/stanford-corenlp-3.7.0.jar"/>
+	<classpathentry kind="lib" path="/Users/kkalouli/Documents/libraries/edu.mit.jwi_2.4.0_all/edu.mit.jwi_2.4.0_jdk.jar"/>
+	<classpathentry kind="lib" path="/Users/kkalouli/Documents/libraries/JIGSAW-master/dist/JIGSAW.jar"/>
+	<classpathentry kind="lib" path="/Users/kkalouli/Documents/libraries/parsers/stanford/stanford-corenlp-3.7.0-models.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

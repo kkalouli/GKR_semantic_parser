@@ -13,13 +13,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
 
-import depParsers.StanfordParser;
 import edu.stanford.nlp.ling.IndexedWord;
 import edu.stanford.nlp.semgraph.SemanticGraph;
 import edu.stanford.nlp.semgraph.SemanticGraphEdge;
 import edu.stanford.nlp.trees.GrammaticalRelation;
 import edu.stanford.nlp.util.Pair;
-import lexSem.SenseMappingsRetriever;
 import semantic.graph.EdgeContent;
 import semantic.graph.NodeContent;
 import semantic.graph.SemGraph;
