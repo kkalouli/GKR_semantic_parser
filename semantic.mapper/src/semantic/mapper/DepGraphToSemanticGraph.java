@@ -69,6 +69,7 @@ public class DepGraphToSemanticGraph {
 		this.stanGraph = null;
 		this.traversed = new ArrayList<SemanticGraphEdge>();
 		this.parser = new StanfordParser();
+		//comment
 
 	}
 
