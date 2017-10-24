@@ -1,4 +1,4 @@
-package sem.mapper;
+package semantic.mapper;
 
 import java.util.Set;
 
