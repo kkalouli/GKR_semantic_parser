@@ -17,5 +17,5 @@ include 'services:webservice'
 
 rootProject.name = 'sem.mapper'
 
-include ':sem.graph'
+include ':semantic.graph'
 project(':semantic.graph').projectDir = new File(settingsDir, '../semantic.graph')
