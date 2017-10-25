@@ -69,7 +69,6 @@ public class DepGraphToSemanticGraph {
 		this.stanGraph = null;
 		this.traversed = new ArrayList<SemanticGraphEdge>();
 		this.parser = new StanfordParser();
-		//comment
 
 	}
 
@@ -94,7 +93,6 @@ public class DepGraphToSemanticGraph {
 		this.graph = new semantic.graph.SemanticGraph();
 		this.graph.setName(stanGraph.toRecoveredSentenceString());
 		integrateDependencies();
-		graph.displayDependencies();
 		integrateRoles();
 		integrateContexts();	
 		integrateProperties();
@@ -439,6 +437,7 @@ public class DepGraphToSemanticGraph {
 		String strLine;
 		while ((strLine = br.readLine()) != null) { */
 		semantic.graph.SemanticGraph graph = semGraph.sentenceToGraph("No man or woman can be carrying a stick and a bag.");
+		graph.displayDependencies();
 		//graph.displayProperties();
 		//graph.displayLex();
 		graph.displayContexts();
