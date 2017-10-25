@@ -1,13 +1,20 @@
 dependencies {
 
-    // This dependency is used internally, and not exposed to consumers on their own compile classpath.
-    //implementation 'com.google.guava:guava:21.0'
+	// we need this version of the snowball stemmer because both the lucene version and the libstemmer
+	// version clash with the version needed by JIGSAW and lucene core (or stanford)
+	// therefore we also dont compile the libstemmer which is normalle needed for JIGSAW
+	compile "com.github.rholder:snowball-stemmer:1.3.0.581.1"
+	
+	// compile all jars that are not found in repositories 
+	compile fileTree(dir: '/Users/kkalouli/Documents/libraries/libs_for_sem_mapper/', include: ['*.jar'])
     
     // https://mvnrepository.com/artifact/edu.stanford.nlp/stanford-corenlp
 	compile group: 'edu.stanford.nlp', name: 'stanford-corenlp', version: '3.7.0'
 	
 	// https://mvnrepository.com/artifact/org.apache.opennlp/opennlp-tools
-	compile group: 'org.apache.opennlp', name: 'opennlp-tools', version: '1.8.2'
+	// JIGSAW uses the 1.5.0 version which does not exist in the rep so imported it
+	// as jar from the fileTree
+	//compile group: 'org.apache.opennlp', name: 'opennlp-tools', version: '1.8.2'
 
 	// https://mvnrepository.com/artifact/mysql/mysql-connector-java
 	compile group: 'mysql', name: 'mysql-connector-java', version: '5.0.3'
@@ -27,7 +34,7 @@ dependencies {
 	
 	compile project(':sem.graph')
 	
-	compile fileTree(dir: '/Users/kkalouli/Documents/libraries/libs_for_sem_mapper/', include: ['*.jar'])
+	
 	
 	
 	

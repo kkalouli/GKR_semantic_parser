@@ -1,7 +1,4 @@
 dependencies {
-
-    // This dependency is used internally, and not exposed to consumers on their own compile classpath.
-    //implementation 'com.google.guava:guava:21.0'
        
 	// https://mvnrepository.com/artifact/org.jgrapht/jgrapht-core
 	compile group: 'org.jgrapht', name: 'jgrapht-core', version: '1.0.1'

@@ -4,6 +4,9 @@ subprojects {
  
     repositories {
         jcenter()
+        maven {
+        url "https://mvnrepository.com/artifact/"
+    }
     }
     
     
