@@ -416,7 +416,7 @@ public class DepGraphToSemanticGraph {
 	
 	/**
 	 * Returns the semantic graph of the given sentence. 
-	 * Before that, it runs the stanford parser, gets the graph and turns this graph to the semantic graph.
+	 * It runs the stanford parser, gets the graph and turns this graph to the semantic graph.
 	 * @param sentence
 	 * @return
 	 * @throws FileNotFoundException
@@ -436,10 +436,10 @@ public class DepGraphToSemanticGraph {
 		/*BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("/Users/kkalouli/Documents/Stanford/comp_sem/SICK/SICK_unique_sent.txt"), "UTF-8"));
 		String strLine;
 		while ((strLine = br.readLine()) != null) { */
-		semantic.graph.SemanticGraph graph = semGraph.sentenceToGraph("The man or the woman is walking.");
+		semantic.graph.SemanticGraph graph = semGraph.sentenceToGraph("The man is carrying a long or big stick.");
 		graph.displayDependencies();
-		graph.displayProperties();
-		graph.displayLex();
+		//graph.displayProperties();
+		//graph.displayLex();
 		graph.displayContexts();
 		graph.displayRoles();
 		//graph.generalDisplay();
@@ -447,7 +447,5 @@ public class DepGraphToSemanticGraph {
 		for (SemanticNode<?> node : graph.getDependencyGraph().getNodes()){
 				System.out.println(node.getLabel()+((SkolemNodeContent) node.getContent()).getContext());
 		}
-
 	}
-
 }

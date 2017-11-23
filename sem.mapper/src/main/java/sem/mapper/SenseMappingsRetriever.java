@@ -278,6 +278,74 @@ public class SenseMappingsRetriever {
 	}
 	
 	/**
+	 * Gets the synonyms of the specified synset of the word lemma with the corresponding pos
+	 * @param lemma
+	 * @param posInitial
+	 * @return
+	 * @throws IOException
+	 */
+	public ArrayList<ArrayList<String>> getLexRelationsOfSynset(String lemma, String synsetID, String pos,
+			ArrayList<ArrayList<String>> listWithLexRelations) throws IOException {
+		// the lex relations will be stored in a big list which contains the lists of each relation
+		ArrayList<String> synonyms = new ArrayList<String>();
+		ArrayList<String> hypernyms = new ArrayList<String>();
+		ArrayList<String> hyponyms = new ArrayList<String>();
+		ArrayList<String> antonyms = new ArrayList<String>();
+		// constructs the URL to the Wordnet dictionary directory
+		URL url = new URL("file", null, "/usr/local/Cellar/wordnet/3.1/dict");	
+		// constructs the dictionary object and opens it
+		IDictionary dict = new Dictionary(url);
+		dict.open ();
+		// look up the given word within dict
+		IIndexWord idxWord = dict.getIndexWord (lemma, POS.valueOf(pos));
+		// if the word is found:
+		if (idxWord != null) {
+			List<IWordID> wordIDs = idxWord.getWordIDs();
+			for (IWordID id : wordIDs){
+				// from all ids (=synsets) only take the one that is the same as the specified synset
+				if (id.getSynsetID().toString().substring(4,id.getSynsetID().toString().lastIndexOf("-")).equals(synsetID)){
+					IWord word = dict.getWord(id);
+					ISynset synset = word.getSynset();
+					// iterate over words associated with the synset and get the synonyms
+					for(IWord w : synset.getWords()){
+						synonyms.add(w.getLemma());
+					}
+					// get the hypernyms
+					for(ISynsetID sid : synset.getRelatedSynsets(Pointer.HYPERNYM)){
+						List <IWord > words ;
+				    	words = dict.getSynset(sid).getWords();
+				    	for(Iterator<IWord>i = words.iterator(); i.hasNext() ;) {
+				    		hypernyms.add(i.next().getLemma());
+				    	 }
+			    	}
+					// get the hyponyms
+					for(ISynsetID sid : synset.getRelatedSynsets(Pointer.HYPONYM)){
+						List <IWord > words ;
+				    	words = dict.getSynset(sid).getWords();
+				    	for(Iterator<IWord>i = words.iterator(); i.hasNext() ;) {
+				    		hyponyms.add(i.next().getLemma());
+				    	 }
+			    	}
+					/* get the antonyms (for the lexical relations we need the method getRelatedWords
+					instead of getRelatedSynsets() */
+					for(IWordID w : word.getRelatedWords(Pointer.ANTONYM)){
+						IWord anto = dict.getWord(w);		
+						antonyms.add(anto.getLemma());
+					}
+					break;
+				}
+			}
+		}
+		dict.close();
+		// add all relations list to the big list
+		listWithLexRelations.add(synonyms);
+		listWithLexRelations.add(hypernyms);
+		listWithLexRelations.add(hyponyms);
+		listWithLexRelations.add(antonyms);
+		return listWithLexRelations;	
+	}
+	
+	/**
 	 * Gets the hypernyms of the word lemma with the corresponding posInitial.
 	 * @param lemma
 	 * @param posInitial
