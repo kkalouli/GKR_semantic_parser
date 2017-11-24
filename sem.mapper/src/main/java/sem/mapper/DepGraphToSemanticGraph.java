@@ -436,7 +436,7 @@ public class DepGraphToSemanticGraph {
 		/*BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("/Users/kkalouli/Documents/Stanford/comp_sem/SICK/SICK_unique_sent.txt"), "UTF-8"));
 		String strLine;
 		while ((strLine = br.readLine()) != null) { */
-		semantic.graph.SemanticGraph graph = semGraph.sentenceToGraph("The man is carrying a long or big stick.");
+		semantic.graph.SemanticGraph graph = semGraph.sentenceToGraph("The man or the woman is walking and talking.");
 		graph.displayDependencies();
 		//graph.displayProperties();
 		//graph.displayLex();
