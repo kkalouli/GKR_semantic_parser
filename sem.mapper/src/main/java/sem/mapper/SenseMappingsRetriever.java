@@ -335,6 +335,8 @@ public class SenseMappingsRetriever {
 					break;
 				}
 			}
+		} else {
+			synonyms.add(lemma+" not found in PWN");
 		}
 		dict.close();
 		// add all relations list to the big list
@@ -511,7 +513,7 @@ public class SenseMappingsRetriever {
 			if (matched.contains("&%")){
 				senseToReturn = matched.substring(matched.indexOf("&%")+2);
 			} 
-			if (matched.contains("@")){
+			if (matched.contains("@") && matched.indexOf("@") != matched.length()-1 && matched.contains("|")){
 				String hypernymsStr = matched.substring(matched.indexOf("@")+1,matched.indexOf("|"));
 				String[] hypernmysList = hypernymsStr.split("@");
 				for (int i = 0; i < hypernmysList.length; i++){
@@ -522,7 +524,7 @@ public class SenseMappingsRetriever {
 						superConcepts.put(hyper, depth);
 				}
 			}
-			if (matched.contains("~")){
+			if (matched.contains("~") && matched.contains("|")){
 				String hyponymsStr = matched.substring(matched.indexOf("~")+1,matched.indexOf("|"));
 				String[] hyponmysList = hyponymsStr.split("~");
 				for (int i = 0; i < hyponmysList.length; i++){

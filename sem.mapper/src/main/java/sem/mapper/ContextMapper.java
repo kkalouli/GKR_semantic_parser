@@ -50,6 +50,7 @@ public class ContextMapper {
 	 */
 	public void integrateAllContexts(){
 		integrateClausalContexts();
+		//graph.displayContexts();
 		integrateCoordinatingContexts();
 		integrateNegativeContexts();
 		integrateModalContexts();		
@@ -274,6 +275,13 @@ public class ContextMapper {
 						// create the self node of the head of the negation
 						ctxHead = addSelfContextNodeAndEdgeToGraph(head);
 					}
+					//If there is no coordination but simple negation.
+				} else {
+					// create the self node of the negation
+					negNode = addSelfContextNodeAndEdgeToGraph(node);
+					head = depGraph.getInNeighbors(node).iterator().next();
+					// create the self node of the head of the negation
+					ctxHead = addSelfContextNodeAndEdgeToGraph(head);
 				}
 
 				// create and add the edge between the negation and its head 
@@ -359,7 +367,14 @@ public class ContextMapper {
 						head = depGraph.getInNeighbors(node).iterator().next();
 						// create the self node of the head of the negation
 						ctxHead = addSelfContextNodeAndEdgeToGraph(headOfHead);
-					}					
+					}
+					//If there is no coordination but simple negation.
+				} else {
+					// create the self node of the negation
+					negNode = addSelfContextNodeAndEdgeToGraph(node);
+					head = depGraph.getInNeighbors(node).iterator().next();
+					// create the self node of the head of the negation
+					ctxHead = addSelfContextNodeAndEdgeToGraph(headOfHead);
 				}
 
 				// create and add the edge between the negation and the head of its head 
@@ -466,7 +481,14 @@ public class ContextMapper {
 						// create the self node of the head of the negation
 						ctxHead = addSelfContextNodeAndEdgeToGraph(head);
 					}			
-				}
+				} //If there is no coordination but simple negation.
+				else {
+				// create the self node of the negation
+				negNode = addSelfContextNodeAndEdgeToGraph(node);
+				head = depGraph.getInNeighbors(node).iterator().next();
+				// create the self node of the head of the negation
+				ctxHead = addSelfContextNodeAndEdgeToGraph(head);
+			}
 
 				// create and add the edge between the negation and the head of its head 
 				ContextHeadEdge labelEdge = new ContextHeadEdge(GraphLabels.NOT, new  RoleEdgeContent());
@@ -681,12 +703,13 @@ public class ContextMapper {
 			if (edge.getLabel().equals("sem_comp") || edge.getLabel().equals("sem_xcomp")){
 				SemanticNode<?> start = graph.getStartNode(edge);
 				SemanticNode<?> finish = graph.getFinishNode(edge);
+				SemanticNode<?> ctxOfStart = this.addSelfContextNodeAndEdgeToGraph(start);
 				SemanticNode<?> ctxOfFinish = this.addSelfContextNodeAndEdgeToGraph(finish);
 				String label = ((SkolemNodeContent) start.getContent()).getStem();
 				ContextHeadEdge labelEdge = new ContextHeadEdge(label, new  RoleEdgeContent());
-				graph.addContextEdge(labelEdge,start, ctxOfFinish);
+				graph.addContextEdge(labelEdge,ctxOfStart, ctxOfFinish);
 				if (finish instanceof SkolemNode)
-					((SkolemNodeContent) finish.getContent()).setContext(start.getLabel());
+					((SkolemNodeContent) finish.getContent()).setContext(ctxOfStart.getLabel());
 			}
 		}
 	}
