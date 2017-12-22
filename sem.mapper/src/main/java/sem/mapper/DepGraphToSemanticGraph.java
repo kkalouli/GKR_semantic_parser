@@ -93,6 +93,7 @@ public class DepGraphToSemanticGraph {
 		this.graph = new semantic.graph.SemanticGraph();
 		this.graph.setName(stanGraph.toRecoveredSentenceString());
 		integrateDependencies();
+		//graph.displayDependencies();
 		integrateRoles();
 		integrateContexts();	
 		integrateProperties();
@@ -436,7 +437,7 @@ public class DepGraphToSemanticGraph {
 		/*BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("/Users/kkalouli/Documents/Stanford/comp_sem/SICK/SICK_unique_sent.txt"), "UTF-8"));
 		String strLine;
 		while ((strLine = br.readLine()) != null) { */
-		semantic.graph.SemanticGraph graph = semGraph.sentenceToGraph("There are Italian men who want to be a great tenor.");
+		semantic.graph.SemanticGraph graph = semGraph.sentenceToGraph("Negotiations did not prevent the strike.");
 		graph.displayDependencies();
 		//graph.displayProperties();
 		//graph.displayLex();

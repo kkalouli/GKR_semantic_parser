@@ -1,15 +1,20 @@
 package sem.mapper;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Scanner;
 import java.util.Map.Entry;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.Set;
 
 import semantic.graph.EdgeContent;
@@ -34,6 +39,7 @@ public class ContextMapper {
 	private boolean verbCoord;
 	private boolean clausalCoord;
 	private boolean disjunction;
+	private HashMap<SemanticNode<?>,String> implCtxs;
 
 	public ContextMapper(semantic.graph.SemanticGraph graph){
 		this.graph = graph;
@@ -43,13 +49,22 @@ public class ContextMapper {
 		this.coord = false;
 		this.verbCoord = false;
 		this.disjunction = false;
+		this.implCtxs = new HashMap<SemanticNode<?>,String>();
 	}
 
 	/**
 	 * Integrates all possible contexts of the sentence. 
+	 * @throws IOException 
 	 */
 	public void integrateAllContexts(){
-		integrateClausalContexts();
+		try {
+			integrateImplicativeContexts();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		//graph.displayContexts();
+		integrateClausalContexts();	
 		//graph.displayContexts();
 		integrateCoordinatingContexts();
 		integrateNegativeContexts();
@@ -703,38 +718,101 @@ public class ContextMapper {
 			if (edge.getLabel().equals("sem_comp") || edge.getLabel().equals("sem_xcomp")){
 				SemanticNode<?> start = graph.getStartNode(edge);
 				SemanticNode<?> finish = graph.getFinishNode(edge);
-				SemanticNode<?> ctxOfStart = this.addSelfContextNodeAndEdgeToGraph(start);
-				SemanticNode<?> ctxOfFinish = this.addSelfContextNodeAndEdgeToGraph(finish);
-				String label = ((SkolemNodeContent) start.getContent()).getStem();
-				ContextHeadEdge labelEdge = new ContextHeadEdge(label, new  RoleEdgeContent());
-				graph.addContextEdge(labelEdge,ctxOfStart, ctxOfFinish);
-				if (finish instanceof SkolemNode)
-					((SkolemNodeContent) finish.getContent()).setContext(ctxOfStart.getLabel());
-			}
-		}
-	}
-
-	private void integrateImplicativeContexts() throws IOException{
-		BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("/Users/kkalouli/Documents/libraries/implicatives.txt"), "UTF-8"));
-		String strLine;
-		HashMap<String,String> mapOfImpl = new HashMap<String,String>();
-		while ((strLine = br.readLine()) != null) { 
-			String sign = strLine.substring(0,strLine.indexOf(" "));
-			String words = strLine.substring(strLine.indexOf("= ")+2);
-			for (String word : words.split(" ")){
-				word = word.replace(",", "");
-				mapOfImpl.put(word,sign);
-			}		
-		}
-		for (SemanticNode<?> node : depGraph.getNodes()){
-			if (mapOfImpl.containsKey(((SkolemNodeContent) node.getContent()).getStem())){
-				String posCtx = mapOfImpl.get(node).split("_")[0];
-				String negCtxOther = mapOfImpl.get(node).split("_")[1];
-				if (posCtx.equals("N")){
-
+				if (!implCtxs.containsKey(start)){
+					SemanticNode<?> ctxOfStart = this.addSelfContextNodeAndEdgeToGraph(start);
+					SemanticNode<?> ctxOfFinish = this.addSelfContextNodeAndEdgeToGraph(finish);
+					String label = ((SkolemNodeContent) start.getContent()).getStem();
+					ContextHeadEdge labelEdge = new ContextHeadEdge(label, new  RoleEdgeContent());
+					graph.addContextEdge(labelEdge,ctxOfStart, ctxOfFinish);
+					if (finish instanceof SkolemNode)
+						((SkolemNodeContent) finish.getContent()).setContext(ctxOfStart.getLabel());
 				}
 			}
 		}
-		br.close();
 	}
+
+	/**
+	 * Integrates the implicative/factive contexts for the words the introduce such contexts. 
+	 * The signatures of the words are looked up from a text file. 
+	 * @throws IOException
+	 */
+	private void integrateImplicativeContexts() throws IOException{
+		// read the file with the implicative/factive signatures
+		BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("implicatives3.txt"), "UTF-8"));
+		String strLine;
+		HashMap<String,String> mapOfImpl = new HashMap<String,String>();
+		//store the file in a hashmap. key: the stem of the word and its complement (that/to). Value: the truth value
+		while ((strLine = br.readLine()) != null) { 
+			String sign = strLine.substring(0,strLine.lastIndexOf("_"));
+			String words = strLine.substring(strLine.indexOf("= ")+2);
+			String comple = strLine.substring(strLine.lastIndexOf("_"), strLine.indexOf("=")-1);
+			for (String word : words.split(" ")){
+				word = word.replace(",", "");
+				mapOfImpl.put(word+comple,sign);
+			}		
+		}
+		//go through each node of the role graph and see if it is such a word
+		for (SemanticNode<?> node : graph.getRoleGraph().getNodes()){
+			String stem = (String) ((SkolemNodeContent) node.getContent()).getStem();
+			// set the negation to false (negation alters the truth condition, thus we need it)
+			boolean isNeg = false;
+			// set the default complement to "z", "zero", when there is no complement at all
+			String comple = "_z";
+			// go through the out edges of this node and extract negation and the complement, if present
+			Set<SemanticEdge> edgesOfNode = depGraph.getOutEdges(node);			
+			for (SemanticEdge edge : edgesOfNode){
+				if (edge.getLabel().equals("neg"))
+					isNeg = true;
+				// to get the complement we need to get to the level of the children of this node
+				SemanticNode<?> finish = graph.getFinishNode(edge);
+				for (SemanticEdge e : depGraph.getOutEdges(finish)){
+					if (e.getLabel().equals("mark") && e.getDestVertexId().contains("that_")){
+						comple = "_that";
+						break;
+					}
+					else if (e.getLabel().equals("mark") && e.getDestVertexId().contains("to_")){
+						comple = "_to";
+						break;
+					}
+				}
+			}
+			// if the hash does not contain a key with this stem and this complement, go to the next node
+			if (!mapOfImpl.containsKey(stem+comple))
+				continue;
+			String truth;
+			// depending on whether there is negaiton or not, take the correct truth condition
+			if (isNeg == true){
+				truth = mapOfImpl.get(stem+comple).split("_")[1];
+			} else{
+				truth = mapOfImpl.get(stem+comple).split("_")[0];
+			}
+			// put the node into the hash with the implicatives
+			implCtxs.put(node, "impl");
+			ContextHeadEdge labelEdge = null;
+			// depending on the turht value, create the correct edge
+			if (truth.equals("N")){
+				labelEdge = new ContextHeadEdge(GraphLabels.UNINST, new  RoleEdgeContent());
+			} else if (truth.equals("P")){
+				labelEdge = new ContextHeadEdge(GraphLabels.INST, new  RoleEdgeContent());
+			}  else if (truth.equals("U")){
+				labelEdge = new ContextHeadEdge(GraphLabels.UNCERT, new  RoleEdgeContent());
+			}  
+			// add the edge and the nodes to the context graph
+			SemanticNode<?> ctxOfImpl = addSelfContextNodeAndEdgeToGraph(node);
+			Set<SemanticNode<?>>children = graph.getRoleGraph().getOutNeighbors(node);
+			for (SemanticNode<?> child : children){
+				// only the children after the current node and with less than 2 in edges should be considered
+				if (((SkolemNodeContent) child.getContent()).getPosition() > ((SkolemNodeContent) node.getContent()).getPosition()
+						&& graph.getRoleGraph().getInEdges(child).size() < 2){
+					SemanticNode<?> ctxOfChild = addSelfContextNodeAndEdgeToGraph(child);
+					graph.addContextEdge(labelEdge,ctxOfImpl, ctxOfChild);
+					if (child instanceof SkolemNode)
+						((SkolemNodeContent) child.getContent()).setContext(ctxOfChild.getLabel());
+				}
+			}	
+		}
+	}
+	
+	
+	
 }

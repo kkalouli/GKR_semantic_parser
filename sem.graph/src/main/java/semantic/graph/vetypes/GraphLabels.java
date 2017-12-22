@@ -23,6 +23,10 @@ public class GraphLabels {
 	
 	public static final String INST = "inst";
 	
+	public static final String UNINST = "uninst";
+	
+	public static final String UNCERT = "uncertain";
+	
 	public static final String IMPERATIVE = "imperative";
 
 	public static final String INTERROGATIVE = "interrogative";
@@ -39,7 +43,7 @@ public class GraphLabels {
 	
 	
 	public static final Set<String> contextEdgeLabels = new HashSet<String>(Arrays.asList(new String[] {
-			CONTEXT_HEAD, OR, NOT, IMPERATIVE, 	INTERROGATIVE, MUST, MAY, MIGHT, SHOULD, OUGHT
+			CONTEXT_HEAD, OR, NOT, IMPERATIVE, 	INTERROGATIVE, MUST, MAY, MIGHT, SHOULD, OUGHT, INST, UNINST, UNCERT
 	}));
 
 	public static final String PRONOUN_RESOLUTION = "prounoun_res";
