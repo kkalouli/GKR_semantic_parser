@@ -1,20 +1,28 @@
 package semantic.graph;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.awt.Color;
 import java.io.Serializable;
 
 import org.springframework.util.SerializationUtils;
 
 import semantic.graph.vetypes.ContextNode;
+import semantic.graph.vetypes.GraphLabels;
 import semantic.graph.vetypes.LexEdge;
 import semantic.graph.vetypes.RoleEdge;
 import semantic.graph.vetypes.SenseNode;
 import semantic.graph.vetypes.SkolemNode;
+import semantic.graph.vetypes.SkolemNodeContent;
 import semantic.graph.vetypes.TermNode;
 
 
@@ -604,6 +612,136 @@ public class SemanticGraph implements Serializable {
 		}
 		SemGraph subGraph = this.graph.getSubGraph(nodes, edges);
 		subGraph.display(nodeProperties, edgeProperties);
+	}
+	
+	/**
+	 * Displays the whole semantic graph as a string. Suitable for testsuites. 
+	 * @return
+	 */
+	public String displayAsString(){
+		displayRoles();
+		displayDependencies();
+		displayContexts();
+		StringBuilder stringToDisplay = new StringBuilder();
+		HashMap<String,List<SemanticEdge>> traversed = new HashMap<String,List<SemanticEdge>>();
+		SemanticNode<?> ctxRoot = null;
+		SemanticNode<?> root = null;
+		for (SemanticNode<?> node : contextGraph.getNodes()){
+			if (contextGraph.getInEdges(node).isEmpty())
+				ctxRoot = node;
+		}
+		// get the root node of the role graph
+		for (SemanticNode<?> node : roleGraph.getNodes()){
+			if (roleGraph.getInEdges(node).isEmpty())
+				root = node;
+		}
+		// go through all edges of the role graph
+		for (SemanticEdge edge : roleGraph.getEdges()){
+			// get the start and finish node of each edhe
+			SemanticNode<?> start = roleGraph.getStartNode(edge);
+			SemanticNode<?> finish = roleGraph.getEndNode(edge);
+			// get the distance of each of the nodes from the root node
+			List<SemanticEdge> distOfStart = roleGraph.getShortestPath(root, start);
+			List<SemanticEdge> distOfFinish = roleGraph.getShortestPath(root, finish);
+			// crete the text for each node (node label plus properties in line)
+			String textOfStart = getNodeAndPropertiesAsText(start, ctxRoot);
+			String textOfFinish = getNodeAndPropertiesAsText(finish, ctxRoot);
+			// put these texts in a hash along with their distances to the root
+			traversed.put(textOfStart, distOfStart);
+			traversed.put(textOfFinish, distOfFinish);			
+		}
+		// Sort the hash by the size of the list of values. Create the own comparator
+		Comparator<Entry<String, List<SemanticEdge>>> valueComparator = new Comparator<Entry<String,List<SemanticEdge>>>() { 
+			
+			@Override 
+			// get the size of the list of each entry and compare it to the next
+			public int compare(Entry<String, List<SemanticEdge>> e1, Entry<String, List<SemanticEdge>> e2){
+				try {
+					Integer v1 = e1.getValue().size(); 
+					Integer v2 = e2.getValue().size(); 
+					return v1.compareTo(v2); 
+				}
+				catch(NullPointerException e){
+					System.out.println("No connection to top node of the Role Graph");
+					//e1.setValue(value)
+					return 0;
+				}
+			} 
+		};
+		
+		// Sort method needs a List, so we first convert the set of entries of the hash to a list
+		List<Entry<String, List<SemanticEdge>>> listOfEntries = new ArrayList<Entry<String, List<SemanticEdge>>>(traversed.entrySet()); 
+		
+		// sorting listOfEntries by values using comparator
+		Collections.sort(listOfEntries, valueComparator); 
+		// create linked hashmap to put the sorted entries in
+		LinkedHashMap<String, List<SemanticEdge>> sortedByValue = new LinkedHashMap<String, List<SemanticEdge>>(listOfEntries.size()); 
+		
+		// copying entries from list to map 
+		for(Entry<String, List<SemanticEdge>> entry : listOfEntries){ 
+			sortedByValue.put(entry.getKey(), entry.getValue()); 
+		} 
+		// get the entryset of the new sorted linked hashmap
+		Set<Entry<String, List<SemanticEdge>>> entrySetSortedByValue = sortedByValue.entrySet(); 
+		
+		// go through the ordered linked hashmap and reorder the entries to write
+		for(Entry<String, List<SemanticEdge>> mapping : entrySetSortedByValue){
+			// initialize all variables because they wont be needed for the root node
+			SemanticEdge lastEdgeOfValueList = null;
+			String labelOfLastEdgeOfValueList = "";
+			SemanticNode<?> parentOfLastEdgeOfValueList = null;
+			int indexOfParent = 0;
+			int indexAfterParent = 0;
+			// get the last edge of the list of values (this is the edge which directly governs the node of the key)
+			if (mapping.getValue().size() != 0)	{	
+				lastEdgeOfValueList = mapping.getValue().get(mapping.getValue().size()-1);
+				// get the label of this edge
+				labelOfLastEdgeOfValueList = lastEdgeOfValueList.getLabel();
+				// get the the start node of theis edge, i.e. the parent of the finish node
+				parentOfLastEdgeOfValueList = graph.getStartNode(lastEdgeOfValueList);
+				// get the position of this parent from within the string sofar
+				indexOfParent = stringToDisplay.indexOf(getNodeAndPropertiesAsText(parentOfLastEdgeOfValueList, ctxRoot));
+				// get the position of the ) coming after the position of the parent
+				indexAfterParent = stringToDisplay.indexOf(")", indexOfParent)+1;
+			}
+			// there are as many tabs as the size of the value list
+			int tabs = mapping.getValue().size();
+			// create a string with so many tabs as tabs
+			String tabsToAdd = new String(new char[tabs]).replace("\0", "\t");			
+			stringToDisplay.insert(indexAfterParent, "\n"+tabsToAdd+labelOfLastEdgeOfValueList+":"+mapping.getKey()); 
+		} 
+		
+		stringToDisplay.replace(0, 1, "");
+		return stringToDisplay.toString();
+		
+	}
+	
+	/***
+	 * Extracts the properties and the contexts of the given node and packs all information in a string. 
+	 * @param node
+	 * @param ctxRoot
+	 * @return
+	 */
+	private String getNodeAndPropertiesAsText(SemanticNode<?> node, SemanticNode<?> ctxRoot){
+		String nodeText = "("+node.getLabel();
+		// get all properties of this node
+		for (SemanticEdge prop : propertyGraph.getOutEdges(node)){
+			if (GraphLabels.propertyEdgeLabels.contains(prop.getLabel()) )
+				nodeText += ","+prop.getDestVertexId();
+		}
+		String ctx = "";
+		// get the utter edge of the context graph if the node is within the context graph 
+		if (contextGraph.containsNode(node)){
+			List<SemanticEdge> listOfEdges = contextGraph.getShortestPath(ctxRoot, node);
+			if (listOfEdges != null && !listOfEdges.isEmpty())
+				ctx = ","+ctxRoot+"_"+listOfEdges.get(0).getLabel();
+		}
+		// if the node is not within the context graph, get the context from the skolem node itself
+		else if (node instanceof SkolemNode)
+				ctx = ","+((SkolemNodeContent) node.getContent()).getContext()+"_inst";
+
+		nodeText += ctx+")";
+		return nodeText;
 	}
 
 	

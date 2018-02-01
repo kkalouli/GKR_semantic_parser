@@ -1,8 +1,10 @@
 package sem.mapper;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
@@ -51,6 +53,7 @@ public class DepGraphToSemanticGraph {
 	public ArrayList<String> nounForms = new ArrayList<String>();
 	private List<SemanticGraphEdge> traversed;
 	private StanfordParser parser;
+	private SenseMappingsRetriever retriever;
 
 
 	public DepGraphToSemanticGraph() throws FileNotFoundException, UnsupportedEncodingException {
@@ -69,6 +72,7 @@ public class DepGraphToSemanticGraph {
 		this.stanGraph = null;
 		this.traversed = new ArrayList<SemanticGraphEdge>();
 		this.parser = new StanfordParser();
+		this.retriever = new SenseMappingsRetriever();
 
 	}
 
@@ -78,20 +82,10 @@ public class DepGraphToSemanticGraph {
 	 * @return
 	 */
 	public semantic.graph.SemanticGraph getGraph(SemanticGraph stanGraph) {
-		verbalForms.add("MD");
-		verbalForms.add("VB");
-		verbalForms.add("VBD");
-		verbalForms.add("VBG");
-		verbalForms.add("VBN");
-		verbalForms.add("VBP");
-		verbalForms.add("VBZ");
-		nounForms.add("NN");
-		nounForms.add("NNP");
-		nounForms.add("NPS");
-		nounForms.add("NNS");
 		this.stanGraph = stanGraph;
 		this.graph = new semantic.graph.SemanticGraph();
 		this.graph.setName(stanGraph.toRecoveredSentenceString());
+		traversed.clear();
 		integrateDependencies();
 		//graph.displayDependencies();
 		integrateRoles();
@@ -217,7 +211,7 @@ public class DepGraphToSemanticGraph {
 				aspect = "not progressive";
 				if (pos.equals("VB") || pos.equals("VBP") || pos.equals("VBZ"))
 					tense = "present";
-				else if (pos.equals("VBD")){
+				else if (pos.equals("VBD") || pos.equals("VBN")){
 					tense = "past";
 				}
 				else if (pos.equals("VBG"))
@@ -370,7 +364,6 @@ public class DepGraphToSemanticGraph {
 	 */
 	private void integrateLexicalFeatures(){
 		HashMap <String, String> senses = null;
-		SenseMappingsRetriever retriever = new SenseMappingsRetriever();
 		try {
 			senses = retriever.disambiguateSensesWithJIGSAW(stanGraph.toRecoveredSentenceString());
 		} catch (Exception e) {
@@ -423,30 +416,45 @@ public class DepGraphToSemanticGraph {
 	 * @throws FileNotFoundException
 	 * @throws UnsupportedEncodingException
 	 */
-	public semantic.graph.SemanticGraph sentenceToGraph(String sentence) throws FileNotFoundException, UnsupportedEncodingException{
-		DepGraphToSemanticGraph semGraph = new DepGraphToSemanticGraph();	
+	public semantic.graph.SemanticGraph sentenceToGraph(String sentence, DepGraphToSemanticGraph semGraph) throws FileNotFoundException, UnsupportedEncodingException{	
 		SemanticGraph stanGraph = parser.parseOnly(sentence);
 		semantic.graph.SemanticGraph graph = semGraph.getGraph(stanGraph);
 		return graph;
 	}
 
+	public void processTestsuite(String file, DepGraphToSemanticGraph semConverter) throws IOException{
+		BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"));
+		BufferedWriter writer = new BufferedWriter( new FileWriter("/Users/kkalouli/Documents/Stanford/comp_sem/forDiss/testsuite_processed.txt"));
+		String strLine;
+		while ((strLine = br.readLine()) != null) {
+			String text = strLine.split("\t")[1];
+			SemanticGraph stanGraph = parser.parseOnly(text);
+			semantic.graph.SemanticGraph graph = semConverter.getGraph(stanGraph);
+			//System.out.println(graph.displayAsString());
+			writer.write(strLine+"\n"+graph.displayAsString()+"\n\n");
+			writer.flush();
+			System.out.println("Processed sentence "+ strLine.split("\t")[0]);
+		}
+		writer.close();
+		br.close();
+	}
 
 
 	public static void main(String args[]) throws IOException {
-		DepGraphToSemanticGraph semGraph = new DepGraphToSemanticGraph();
-		/*BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("/Users/kkalouli/Documents/Stanford/comp_sem/SICK/SICK_unique_sent.txt"), "UTF-8"));
-		String strLine;
-		while ((strLine = br.readLine()) != null) { */
-		semantic.graph.SemanticGraph graph = semGraph.sentenceToGraph("Negotiations did not prevent the strike.");
+		DepGraphToSemanticGraph semConverter = new DepGraphToSemanticGraph();
+		semConverter.processTestsuite("/Users/kkalouli/Documents/Stanford/comp_sem/forDiss/testsuite.txt", semConverter);
+		/*DepGraphToSemanticGraph semGraph = new DepGraphToSemanticGraph();
+		semantic.graph.SemanticGraph graph = semGraph.sentenceToGraph("The man believed that the woman was pregnant.", semGraph);
 		graph.displayDependencies();
-		//graph.displayProperties();
+		graph.displayProperties();
 		//graph.displayLex();
 		graph.displayContexts();
 		graph.displayRoles();
 		//graph.generalDisplay();
 		//graph.display();
+		System.out.println(graph.displayAsString());
 		for (SemanticNode<?> node : graph.getDependencyGraph().getNodes()){
 				System.out.println(node.getLabel()+((SkolemNodeContent) node.getContent()).getContext());
-		}
+		}*/
 	}
 }

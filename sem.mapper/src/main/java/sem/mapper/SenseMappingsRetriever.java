@@ -56,6 +56,7 @@ public class SenseMappingsRetriever {
 	HashMap<String,String> hashOfPOS = new HashMap<String,String>();
 	public Map<String, Integer> subConcepts = new HashMap<String,Integer>();
 	public Map<String, Integer> superConcepts =new HashMap<String,Integer>();
+	private JIGSAW jigsaw;
 	
 	public SenseMappingsRetriever(){
 		/* fill hash with the POS tags of the Penn treebank. The POS
@@ -77,6 +78,7 @@ public class SenseMappingsRetriever {
 		hashOfPOS.put("VBN","VERB");
 		hashOfPOS.put("VBP","VERB");
 		hashOfPOS.put("VBZ","VERB");
+		this.jigsaw = new JIGSAW(new File("jigsaw.properties"));
 	}
 
 	/**
@@ -666,7 +668,6 @@ public class SenseMappingsRetriever {
 	      }
 		writerTokenizer.close();
 		// run the disambiguation
-	   JIGSAW jigsaw = new JIGSAW(new File("/Users/kkalouli/Documents/eclipseWorkspace/Syn2Sem/resources/jigsaw.properties"));
 	   TokenGroup tg = null;
        BufferedReader in = new BufferedReader(new FileReader(tmpTokenized));
        List<String> list = new ArrayList<String>();

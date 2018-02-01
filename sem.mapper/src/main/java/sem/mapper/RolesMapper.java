@@ -99,6 +99,7 @@ public class RolesMapper {
 				// get start and finish node of the current edge
 				SemanticNode<?> start = depGraph.getStartNode(edge);
 				SemanticNode<?> finish = depGraph.getEndNode(edge);
+				//graph.displayRoles();
 				// integrate the coordinating roles
 				integrateCoordinatingRoles(start, finish, edge, edgeLabel);
 				integrateBasicRoles(start, finish, edgeLabel);
@@ -130,6 +131,7 @@ public class RolesMapper {
 	 * Integrate all edges that are stored in the edgesToAdd and dont involve coordination
 	 */
 	private void integrateOtherEdges(){
+		//graph.displayRoles();
 		for (SemanticEdge edge : edgesToAdd){
 			// get start and finish node of the current edge
 			SemanticNode<?> start = depGraph.getStartNode(edge);
@@ -287,7 +289,7 @@ public class RolesMapper {
 		// set the contexts of the start and finish nodes
 		if (start instanceof SkolemNode && finish instanceof SkolemNode){
 			// at this point set the contexts of all words that get involved to the role graph. the context is top at the moment 
-			((SkolemNodeContent) start.getContent()).setContext("top;");
+			((SkolemNodeContent) start.getContent()).setContext("top");
 			((SkolemNodeContent) finish.getContent()).setContext("top");
 		}
 	}
@@ -364,10 +366,16 @@ public class RolesMapper {
 		}
 		break;
 		case "acl:relcl": role = GraphLabels.RESTRICTION;
+		break;
+		case "nummod": if (verbCoord == false && coord == false){
+			role = GraphLabels.RESTRICTION;
+		}
 		}
 		// nmod can have difefrent subtypes, therefore it is put here and not within the switch 
 		if (role.equals("") && verbCoord == false && coord == false && edgeLabel.contains("nmod")){
 			role = GraphLabels.NMOD;
+		} else if (edgeLabel.contains("acl")){
+			role = GraphLabels.NMOD;	
 		}
 		
 		// if the role is not empty, create the edge for this role and set the contexts
@@ -376,7 +384,7 @@ public class RolesMapper {
 			graph.addRoleEdge(roleEdge, start, finish);
 			if (start instanceof SkolemNode && finish instanceof SkolemNode){
 				// at this point set the contexts of all words that get involved to the role graph. the context is top at the moment 
-				((SkolemNodeContent) start.getContent()).setContext("top;");
+				((SkolemNodeContent) start.getContent()).setContext("top");
 				((SkolemNodeContent) finish.getContent()).setContext("top");
 			}
 		}

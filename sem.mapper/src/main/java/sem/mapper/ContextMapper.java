@@ -57,16 +57,17 @@ public class ContextMapper {
 	 * @throws IOException 
 	 */
 	public void integrateAllContexts(){
+		//graph.displayRoles();
 		try {
 			integrateImplicativeContexts();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		//graph.displayContexts();
 		integrateClausalContexts();	
 		//graph.displayContexts();
 		integrateCoordinatingContexts();
+		//graph.displayContexts();
 		integrateNegativeContexts();
 		integrateModalContexts();		
 		SemGraph conGraph = graph.getContextGraph();	
@@ -721,7 +722,7 @@ public class ContextMapper {
 				if (!implCtxs.containsKey(start)){
 					SemanticNode<?> ctxOfStart = this.addSelfContextNodeAndEdgeToGraph(start);
 					SemanticNode<?> ctxOfFinish = this.addSelfContextNodeAndEdgeToGraph(finish);
-					String label = ((SkolemNodeContent) start.getContent()).getStem();
+					String label = start.getLabel().substring(0,start.getLabel().indexOf("_"));
 					ContextHeadEdge labelEdge = new ContextHeadEdge(label, new  RoleEdgeContent());
 					graph.addContextEdge(labelEdge,ctxOfStart, ctxOfFinish);
 					if (finish instanceof SkolemNode)
@@ -753,6 +754,8 @@ public class ContextMapper {
 		}
 		//go through each node of the role graph and see if it is such a word
 		for (SemanticNode<?> node : graph.getRoleGraph().getNodes()){
+			if (!(node instanceof SkolemNode))
+				continue;
 			String stem = (String) ((SkolemNodeContent) node.getContent()).getStem();
 			// set the negation to false (negation alters the truth condition, thus we need it)
 			boolean isNeg = false;
@@ -801,18 +804,16 @@ public class ContextMapper {
 			SemanticNode<?> ctxOfImpl = addSelfContextNodeAndEdgeToGraph(node);
 			Set<SemanticNode<?>>children = graph.getRoleGraph().getOutNeighbors(node);
 			for (SemanticNode<?> child : children){
+				if (child instanceof SkolemNode){
 				// only the children after the current node and with less than 2 in edges should be considered
-				if (((SkolemNodeContent) child.getContent()).getPosition() > ((SkolemNodeContent) node.getContent()).getPosition()
-						&& graph.getRoleGraph().getInEdges(child).size() < 2){
-					SemanticNode<?> ctxOfChild = addSelfContextNodeAndEdgeToGraph(child);
-					graph.addContextEdge(labelEdge,ctxOfImpl, ctxOfChild);
-					if (child instanceof SkolemNode)
+					if (((SkolemNodeContent) child.getContent()).getPosition() > ((SkolemNodeContent) node.getContent()).getPosition()
+							&& graph.getRoleGraph().getInEdges(child).size() < 2){
+						SemanticNode<?> ctxOfChild = addSelfContextNodeAndEdgeToGraph(child);
+						graph.addContextEdge(labelEdge,ctxOfImpl, ctxOfChild);
 						((SkolemNodeContent) child.getContent()).setContext(ctxOfChild.getLabel());
+					}
 				}
 			}	
 		}
-	}
-	
-	
-	
+	}	
 }
