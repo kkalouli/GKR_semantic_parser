@@ -619,13 +619,16 @@ public class SemanticGraph implements Serializable {
 	 * @return
 	 */
 	public String displayAsString(){
-		displayRoles();
-		displayDependencies();
-		displayContexts();
+		//displayRoles();
+		//displayDependencies();
+		//displayContexts();
 		StringBuilder stringToDisplay = new StringBuilder();
 		HashMap<String,List<SemanticEdge>> traversed = new HashMap<String,List<SemanticEdge>>();
+		// initialize the ctx and role root
 		SemanticNode<?> ctxRoot = null;
-		SemanticNode<?> root = null;
+		SemanticNode<?> roleRoot = null;
+		ArrayList<SemanticNode<?>> roleRoots = new ArrayList<SemanticNode<?>>();
+		// get the ctx root
 		for (SemanticNode<?> node : contextGraph.getNodes()){
 			if (contextGraph.getInEdges(node).isEmpty())
 				ctxRoot = node;
@@ -633,22 +636,34 @@ public class SemanticGraph implements Serializable {
 		// get the root node of the role graph
 		for (SemanticNode<?> node : roleGraph.getNodes()){
 			if (roleGraph.getInEdges(node).isEmpty())
-				root = node;
+				roleRoots.add(node);
 		}
-		// go through all edges of the role graph
+		// go through all edges of the role graph in order to put each node to a hashmap containing the "text" of the node and its distance to the role root
 		for (SemanticEdge edge : roleGraph.getEdges()){
 			// get the start and finish node of each edhe
 			SemanticNode<?> start = roleGraph.getStartNode(edge);
 			SemanticNode<?> finish = roleGraph.getEndNode(edge);
+			// go through the role roots (there can be more than one for coordinated sentences) and see if the current start node is a child of the current root
+			for (SemanticNode<?> n : roleRoots){
+				if (n.equals(start) || roleGraph.getOutReach(n).contains(start)){
+					roleRoot = n;
+					break;
+				}
+			}			
 			// get the distance of each of the nodes from the root node
-			List<SemanticEdge> distOfStart = roleGraph.getShortestPath(root, start);
-			List<SemanticEdge> distOfFinish = roleGraph.getShortestPath(root, finish);
+			List<SemanticEdge> distOfStart = roleGraph.getShortestPath(roleRoot, start);
+			List<SemanticEdge> distOfFinish = new ArrayList<SemanticEdge>();
+			distOfFinish.addAll(roleGraph.getShortestPath(roleRoot, start));
+			distOfFinish.addAll(roleGraph.getShortestPath(start, finish));	
 			// crete the text for each node (node label plus properties in line)
 			String textOfStart = getNodeAndPropertiesAsText(start, ctxRoot);
 			String textOfFinish = getNodeAndPropertiesAsText(finish, ctxRoot);
 			// put these texts in a hash along with their distances to the root
 			traversed.put(textOfStart, distOfStart);
-			traversed.put(textOfFinish, distOfFinish);			
+			if (traversed.containsKey(textOfFinish))
+				traversed.put(textOfFinish+"$", distOfFinish);
+			else
+				traversed.put(textOfFinish, distOfFinish);
 		}
 		// Sort the hash by the size of the list of values. Create the own comparator
 		Comparator<Entry<String, List<SemanticEdge>>> valueComparator = new Comparator<Entry<String,List<SemanticEdge>>>() { 
@@ -699,16 +714,17 @@ public class SemanticGraph implements Serializable {
 				labelOfLastEdgeOfValueList = lastEdgeOfValueList.getLabel();
 				// get the the start node of theis edge, i.e. the parent of the finish node
 				parentOfLastEdgeOfValueList = graph.getStartNode(lastEdgeOfValueList);
+				String str = getNodeAndPropertiesAsText(parentOfLastEdgeOfValueList, ctxRoot);
 				// get the position of this parent from within the string sofar
-				indexOfParent = stringToDisplay.indexOf(getNodeAndPropertiesAsText(parentOfLastEdgeOfValueList, ctxRoot));
+				indexOfParent = stringToDisplay.indexOf(str);
 				// get the position of the ) coming after the position of the parent
-				indexAfterParent = stringToDisplay.indexOf(")", indexOfParent)+1;
+				indexAfterParent = indexOfParent+str.length(); 			//stringToDisplay.indexOf(")", indexOfParent)+1;
 			}
 			// there are as many tabs as the size of the value list
 			int tabs = mapping.getValue().size();
 			// create a string with so many tabs as tabs
 			String tabsToAdd = new String(new char[tabs]).replace("\0", "\t");			
-			stringToDisplay.insert(indexAfterParent, "\n"+tabsToAdd+labelOfLastEdgeOfValueList+":"+mapping.getKey()); 
+			stringToDisplay.insert(indexAfterParent, "\n"+tabsToAdd+labelOfLastEdgeOfValueList+":"+mapping.getKey().replace("$", "")); 
 		} 
 		
 		stringToDisplay.replace(0, 1, "");
@@ -730,11 +746,17 @@ public class SemanticGraph implements Serializable {
 				nodeText += ","+prop.getDestVertexId();
 		}
 		String ctx = "";
-		// get the utter edge of the context graph if the node is within the context graph 
+		// get the outer edge of the context graph if the node is within the context graph 
 		if (contextGraph.containsNode(node)){
-			List<SemanticEdge> listOfEdges = contextGraph.getShortestPath(ctxRoot, node);
-			if (listOfEdges != null && !listOfEdges.isEmpty())
-				ctx = ","+ctxRoot+"_"+listOfEdges.get(0).getLabel();
+			SemanticNode<?> parentCtx = contextGraph.getInNeighbors(node).iterator().next();
+			if (parentCtx.getLabel().equals("ctx("+node.getLabel()+")")){
+				SemanticNode<?> parent = contextGraph.getInNeighbors(parentCtx).iterator().next();
+				SemanticEdge link = contextGraph.getEdges(parent, parentCtx).iterator().next();
+				ctx = ","+parent+"_"+link;
+			}
+			else if (parentCtx.getLabel().equals("top")){
+				ctx = ",top";
+			}
 		}
 		// if the node is not within the context graph, get the context from the skolem node itself
 		else if (node instanceof SkolemNode)

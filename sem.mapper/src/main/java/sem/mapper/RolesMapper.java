@@ -2,6 +2,7 @@ package sem.mapper;
 
 import java.awt.List;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -46,6 +47,9 @@ public class RolesMapper {
 	// need to distinguish the subjs of the first and second verb in case of coordination
 	private ArrayList<SemanticNode<?>> subjsOfFirstPred;
 	private ArrayList<SemanticNode<?>> subjsOfSecondPred;
+	// the edges that have been traversed when there is sentential coordination and the subgraphs of the separate sentences have to be build 
+	// avoid infinite loop if original graph contains a cycle
+	private ArrayList<SemanticEdge> traversedEdges;
 	// graphs to be processed (in case there are more because of coordination)
 	private ArrayList<SemGraph> graphsToProcess;
 	private ArrayList<SemGraph> graphsToAdd;
@@ -68,6 +72,7 @@ public class RolesMapper {
 		this.graphsToProcess = new ArrayList<SemGraph>();
 		this.graphsToAdd = new ArrayList<SemGraph>();
 		this.edgesToAdd = new ArrayList<SemanticEdge>();
+		this.traversedEdges = new ArrayList<SemanticEdge>();
 		
 	}
 
@@ -106,7 +111,7 @@ public class RolesMapper {
 				verbCoord = false;
 				coord = false;
 			}
-			// after dealing with coordination, add all the roles of the edges of the edgesToAdd
+			// after dealing with coordination, add all the roles of the edges of the edgesToAdd to the role graph
 			if (!edgesToAdd.isEmpty()){		
 				integrateOtherEdges();
 				edgesToAdd.clear();
@@ -147,6 +152,7 @@ public class RolesMapper {
 					if (edge.getLabel().equals("amod") || edge.getLabel().equals("advmod") || edge.getLabel().equals("nmod")){
 						begin = start;
 					}
+					// if this edge is an edge of a combined node, then the combined node gets to be the parent
 					else if (!graph.getRoleGraph().getInNeighbors(rNode).isEmpty()){
 						SemanticNode<?> combNode = graph.getRoleGraph().getInNeighbors(rNode).iterator().next();
 						begin = combNode;
@@ -175,8 +181,10 @@ public class RolesMapper {
 	 * @return
 	 */
 	private SemGraph createSubgraph(SemanticNode<?> node, SemanticNode<?> nodeToExclude, Set<SemanticEdge> listOfSubEdges, Set<SemanticNode<?>> listOfSubNodes){
+		//graph.displayDependencies();
 		// got through all children edges of the specified node
 		for (SemanticEdge subEdge : graph.getOutEdges(node)){
+			traversedEdges.add(subEdge);
 			// if the edge finishes with the nodeToEclude, move on
 			if (graph.getFinishNode(subEdge).equals(nodeToExclude))
 				continue;
@@ -187,8 +195,10 @@ public class RolesMapper {
 				listOfSubNodes.add(graph.getStartNode(subEdge));
 			if (!listOfSubNodes.contains(graph.getFinishNode(subEdge)))
 				listOfSubNodes.add(graph.getFinishNode(subEdge));
-			// do the same for the finish node of the current edge (recursively so that children of children are also added)
-			createSubgraph(graph.getFinishNode(subEdge), nodeToExclude, listOfSubEdges, listOfSubNodes);
+			if (!traversedEdges.contains(subEdge)){
+				// do the same for the finish node of the current edge (recursively so that children of children are also added)
+				createSubgraph(graph.getFinishNode(subEdge), nodeToExclude, listOfSubEdges, listOfSubNodes);
+			}
 		}
 		// create the subgraph
 		return graph.getSubGraph(listOfSubNodes, listOfSubEdges);
@@ -204,11 +214,11 @@ public class RolesMapper {
 		SemanticNode<?> start = depGraph.getStartNode(edge);
 		SemanticNode<?> finish = depGraph.getEndNode(edge);
 		// set the coordination  
-		if (edge.getLabel().contains("conj") && !verbalForms.contains(((SkolemNodeContent) start.getContent()).getPosTag())){			
+		if (edge.getLabel().contains("conj") && !verbalForms.contains(((SkolemNodeContent) start.getContent()).getPosTag()) && !depGraph.getInEdges(start).isEmpty() ){			
 				coord = true;
 		}
 		// set the verb coordination and get the subjs of the coordinated verbs
-		else if (edge.getLabel().contains("conj")  && verbalForms.contains(((SkolemNodeContent) start.getContent()).getPosTag()) ){
+		else if (edge.getLabel().contains("conj")  && (verbalForms.contains(((SkolemNodeContent) start.getContent()).getPosTag()) || depGraph.getInEdges(start).isEmpty() ) ){
 				verbCoord = true;
 				for (SemanticEdge neighborEdge :graph.getOutEdges(graph.getFinishNode(edge))){ 
 					if (neighborEdge.getLabel().contains("subj")){	
@@ -332,6 +342,11 @@ public class RolesMapper {
 		}
 		passive = true;
 		break;
+		case "nsubjpass:xsubj" : if (verbCoord == false && coord == false){
+			role = GraphLabels.OBJ;
+		}
+		passive = true;
+		break;
 		// only add it when the verb coord is false; when true, it will be added later
 		case "csubj" : if (verbCoord == false && coord == false){
 			role = GraphLabels.SUBJ;
@@ -376,6 +391,8 @@ public class RolesMapper {
 			role = GraphLabels.NMOD;
 		} else if (edgeLabel.contains("acl")){
 			role = GraphLabels.NMOD;	
+		}  else if (edgeLabel.contains("advcl")){
+			role = GraphLabels.AMOD;	
 		}
 		
 		// if the role is not empty, create the edge for this role and set the contexts

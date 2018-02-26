@@ -452,7 +452,7 @@ public class SenseMappingsRetriever {
 				// if the senses column actually contains something
 				if (senses.contains(":")){
 					// get the first synset returned
-					String disambSense = senses.substring(0,senses.indexOf(":"));
+					String disambSense = senses.substring(1,senses.indexOf(":"));
 					// get the pos of the current word
 					String posInitial = columns[4];
 					mapping = extractSUMOMappingFromSUMO(disambSense,posInitial);
@@ -513,7 +513,7 @@ public class SenseMappingsRetriever {
 		
 		if (!matched.equals("")) {
 			if (matched.contains("&%")){
-				senseToReturn = matched.substring(matched.indexOf("&%")+2);
+				senseToReturn = matched.substring(matched.indexOf("&%")); //+2
 			} 
 			if (matched.contains("@") && matched.indexOf("@") != matched.length()-1 && matched.contains("|")){
 				String hypernymsStr = matched.substring(matched.indexOf("@")+1,matched.indexOf("|"));
@@ -686,7 +686,7 @@ public class SenseMappingsRetriever {
 	
 	
 	public static void main(String args[]) throws IOException {
-		String input = "/Users/kkalouli/Documents/Stanford/comp_sem/SICK_4001-6076.parsed_sensestaggedJIGSAW.conllu";
+		String input = "/Users/kkalouli/Documents/Stanford/comp_sem/SICK/test.conllu";
 		SenseMappingsRetriever mapper = new SenseMappingsRetriever();
 		//mapper.extractPWNSensesToText("dance","VB"); 
 		mapper.annotateConlluWithSUMOSenses(input);

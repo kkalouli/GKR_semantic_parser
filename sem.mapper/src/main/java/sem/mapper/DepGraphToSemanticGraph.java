@@ -147,6 +147,8 @@ public class DepGraphToSemanticGraph {
 			}
 			//SkolemNode finish = new SkolemNode(dependentContent.getSkolem(), dependentContent);
 			// add the dependency between the parent and the current child
+			if (parentNode.equals(finish))
+				continue;
 			graph.addDependencyEdge(roleEdge, parentNode, finish);
 			
 			// recursively, go back and do the same for each of the children of the child
@@ -163,6 +165,7 @@ public class DepGraphToSemanticGraph {
 	private void integrateDependencies(){
 		// get the root node of the stanford graph
 		IndexedWord rootN = stanGraph.getFirstRoot();
+		//stanGraph.prettyPrint();
 		// create a new node for the semantic graph and define all its features 
 		SkolemNodeContent rootContent = new SkolemNodeContent();
 		rootContent.setSurface(rootN.originalText());
@@ -318,7 +321,7 @@ public class DepGraphToSemanticGraph {
 		String concept = "";
 		
 		sense = senses.get(((SkolemNode) node).getSurface());
-		if (!sense.equals("U")){
+		if ( sense != null && !sense.equals("U")){
 			sense = sense.substring(1,senses.get(((SkolemNode) node).getSurface()).indexOf(":"));
 			try {
 				concept = retriever.extractSUMOMappingFromSUMO(sense, ((SkolemNode) node).getPartOfSpeech());
@@ -340,7 +343,7 @@ public class DepGraphToSemanticGraph {
 				String pos = ((SkolemNode) graph.getDependencyGraph().getStartNode(inEdge)).getPartOfSpeech();
 				try {
 					ArrayList<String> compSenses = retriever.accessPWNDBAndExtractSenses(compound,pos);
-					if (!compSenses.isEmpty()){
+					if (compSenses != null && !compSenses.isEmpty()){
 						sense = compSenses.get(0).substring(4, compSenses.get(0).lastIndexOf("-"));		
 						concept = retriever.extractSUMOMappingFromSUMO(sense, ((SkolemNode) node).getPartOfSpeech());				
 						lexSem.put(sense,concept);
@@ -424,9 +427,15 @@ public class DepGraphToSemanticGraph {
 
 	public void processTestsuite(String file, DepGraphToSemanticGraph semConverter) throws IOException{
 		BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"));
-		BufferedWriter writer = new BufferedWriter( new FileWriter("/Users/kkalouli/Documents/Stanford/comp_sem/forDiss/testsuite_processed.txt"));
+		// true stands for append = true (dont overwrite)
+		BufferedWriter writer = new BufferedWriter( new FileWriter(file.substring(0,file.indexOf(".txt"))+"_processed.txt", true));
 		String strLine;
 		while ((strLine = br.readLine()) != null) {
+			if (strLine.startsWith("####")){
+				writer.write(strLine+"\n\n");
+				writer.flush();
+				continue;
+			}
 			String text = strLine.split("\t")[1];
 			SemanticGraph stanGraph = parser.parseOnly(text);
 			semantic.graph.SemanticGraph graph = semConverter.getGraph(stanGraph);
@@ -442,11 +451,11 @@ public class DepGraphToSemanticGraph {
 
 	public static void main(String args[]) throws IOException {
 		DepGraphToSemanticGraph semConverter = new DepGraphToSemanticGraph();
-		semConverter.processTestsuite("/Users/kkalouli/Documents/Stanford/comp_sem/forDiss/testsuite.txt", semConverter);
+		semConverter.processTestsuite("/Users/kkalouli/Documents/Stanford/comp_sem/forDiss/HP_testsuite_shortened_active.txt", semConverter);
 		/*DepGraphToSemanticGraph semGraph = new DepGraphToSemanticGraph();
-		semantic.graph.SemanticGraph graph = semGraph.sentenceToGraph("The man believed that the woman was pregnant.", semGraph);
+		semantic.graph.SemanticGraph graph = semGraph.sentenceToGraph("The boy faked the illness.", semGraph);
 		graph.displayDependencies();
-		graph.displayProperties();
+		//graph.displayProperties();
 		//graph.displayLex();
 		graph.displayContexts();
 		graph.displayRoles();

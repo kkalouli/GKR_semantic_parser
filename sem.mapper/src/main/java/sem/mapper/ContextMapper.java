@@ -40,7 +40,8 @@ public class ContextMapper {
 	private boolean clausalCoord;
 	private boolean disjunction;
 	private HashMap<SemanticNode<?>,String> implCtxs;
-
+	private HashMap<String,String> mapOfImpl;
+	
 	public ContextMapper(semantic.graph.SemanticGraph graph){
 		this.graph = graph;
 		this.depGraph = this.graph.getDependencyGraph();
@@ -50,6 +51,36 @@ public class ContextMapper {
 		this.verbCoord = false;
 		this.disjunction = false;
 		this.implCtxs = new HashMap<SemanticNode<?>,String>();
+		
+		// read the file with the implicative/factive signatures
+		BufferedReader br = null;
+		try {
+			br = new BufferedReader(new InputStreamReader(new FileInputStream("implicatives3.txt"), "UTF-8"));
+		} catch (UnsupportedEncodingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		String strLine;
+		this.mapOfImpl = new HashMap<String,String>();
+		//store the file in a hashmap. key: the stem of the word and its complement (that/to). Value: the truth value
+		try {
+			while ((strLine = br.readLine()) != null) { 
+				String sign = strLine.substring(0,strLine.lastIndexOf("_"));
+				String words = strLine.substring(strLine.indexOf("= ")+2);
+				String comple = strLine.substring(strLine.lastIndexOf("_"), strLine.indexOf("=")-1);
+				for (String word : words.split(" ")){
+					word = word.replace(",", "");
+					mapOfImpl.put(word+comple,sign);
+				}		
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	
 	}
 
 	/**
@@ -58,18 +89,22 @@ public class ContextMapper {
 	 */
 	public void integrateAllContexts(){
 		//graph.displayRoles();
+		//graph.displayDependencies();
 		try {
 			integrateImplicativeContexts();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		//graph.displayContexts();
 		integrateClausalContexts();	
 		//graph.displayContexts();
 		integrateCoordinatingContexts();
 		//graph.displayContexts();
 		integrateNegativeContexts();
-		integrateModalContexts();		
+		//graph.displayContexts();
+		integrateModalContexts();	
+		//graph.displayContexts();
 		SemGraph conGraph = graph.getContextGraph();	
 		// make sure that all "root" nodes existing in the role graph have been added to the context graph; if not add them now
 		for (SemanticNode<?> node : graph.getRoleGraph().getNodes()){
@@ -116,6 +151,15 @@ public class ContextMapper {
 		for (SemanticNode<?> top : listOfTops){
 			graph.removeContextNode(top);
 		}
+		
+		
+		/*for (SemanticNode<?> rNode: graph.getRoleGraph().getNodes()){
+			if (rNode instanceof SkolemNode && ((SkolemNodeContent) rNode.getContent()).getContext().equals("top") && !conGraph.getNodes().contains(rNode)){
+				SemanticNode<?> parent = graph.getRoleGraph().getInNeighbors(rNode).iterator().next();
+				if (parent instanceof SkolemNode && !((SkolemNodeContent) parent.getContent()).getContext().equals("top") )
+					((SkolemNodeContent) rNode.getContent()).setContext(((SkolemNode) parent).getContext());
+			}
+		}*/	
 	}
 
 	/**
@@ -126,9 +170,10 @@ public class ContextMapper {
 		for (SemanticNode<?> node : nodes){
 			if (((SkolemNodeContent) node.getContent()).getStem().equals("might") 
 					|| ((SkolemNodeContent) node.getContent()).getStem().equals("should")
+					|| ((SkolemNodeContent) node.getContent()).getStem().equals("may")
 					|| ((SkolemNodeContent) node.getContent()).getStem().equals("must")
-					|| ((SkolemNodeContent) node.getContent()).getStem().equals("ought")
 					|| ((SkolemNodeContent) node.getContent()).getStem().equals("can")
+					|| ((SkolemNodeContent) node.getContent()).getStem().equals("could")
 					|| ((SkolemNodeContent) node.getContent()).getStem().equals("would")){
 				// create the self node of the modal
 				SemanticNode<?> modalNode = addSelfContextNodeAndEdgeToGraph(node);
@@ -162,7 +207,9 @@ public class ContextMapper {
 				 * disolved and we just keep the negation context node which is then used as top for the 
 				 * modal context graph to eb created
 				 */
-				else if (((SkolemNodeContent) node.getContent()).getStem().equals("can") ){
+				else if (((SkolemNodeContent) node.getContent()).getStem().equals("can") 
+						|| ((SkolemNodeContent) node.getContent()).getStem().equals("could")
+						|| ((SkolemNodeContent) node.getContent()).getStem().equals("would")){
 					// remove all edges and nodes that are dependent on the negation_context node
 					for (SemanticNode<?> sNode : graph.getContextGraph().getOutNeighbors(negModalNode)){
 						for (SemanticEdge sEdge : graph.getContextGraph().getEdges(sNode)){
@@ -316,7 +363,7 @@ public class ContextMapper {
 			 * The dog is carrying no stick.
 			 * --> the dog and the stick exist only in the ctx of the carry and the head of the negation is a NP
 			 */
-			else if (((SkolemNodeContent) node.getContent()).getStem().equals("no") ){
+			else if (((SkolemNodeContent) node.getContent()).getStem().equals("no")){
 				// get the head of the negation
 				SemanticNode<?> head = depGraph.getInNeighbors(node).iterator().next();;
 				SemanticNode<?> ctxHead = null;
@@ -397,7 +444,7 @@ public class ContextMapper {
 				ContextHeadEdge labelEdge = new ContextHeadEdge(GraphLabels.NOT, new  RoleEdgeContent());
 				graph.addContextEdge(labelEdge, negNode, ctxHead);
 				// the negated argument must be instantiated within the context of its head; it doesnt belong to top anymore		
-				ContextHeadEdge instEdge = new ContextHeadEdge(GraphLabels.INST, new  RoleEdgeContent());
+				ContextHeadEdge instEdge = new ContextHeadEdge(GraphLabels.VER, new  RoleEdgeContent());
 				graph.addContextEdge(instEdge, ctxHead, head);		
 				// the existing ctx of the negated argument is set to the next context
 				if (head instanceof SkolemNode)
@@ -419,7 +466,7 @@ public class ContextMapper {
 						if (child instanceof SkolemNode && !child.equals(head)) {
 							((SkolemNodeContent) child.getContent()).setContext(ctxHead.getLabel());
 							// the negated argument must be instantiated within the context of its head; it doesnt belong to top anymore		
-							ContextHeadEdge instEdge2 = new ContextHeadEdge(GraphLabels.INST, new  RoleEdgeContent());
+							ContextHeadEdge instEdge2 = new ContextHeadEdge(GraphLabels.VER, new  RoleEdgeContent());
 							graph.addContextEdge(instEdge2, ctxHead, child);
 						}
 					}
@@ -540,7 +587,7 @@ public class ContextMapper {
 				}
 
 				// the negated argument must be instantiated within the context of its head; it doesnt belong to top anymore	
-				ContextHeadEdge instEdge = new ContextHeadEdge(GraphLabels.INST, new  RoleEdgeContent());
+				ContextHeadEdge instEdge = new ContextHeadEdge(GraphLabels.VER, new  RoleEdgeContent());
 				graph.addContextEdge(instEdge, ctxHead, finish);
 				// the existing ctx of the negated argument is set to the next context
 				((SkolemNodeContent) finish.getContent()).setContext(ctxHead.getLabel());
@@ -738,20 +785,8 @@ public class ContextMapper {
 	 * @throws IOException
 	 */
 	private void integrateImplicativeContexts() throws IOException{
-		// read the file with the implicative/factive signatures
-		BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("implicatives3.txt"), "UTF-8"));
-		String strLine;
-		HashMap<String,String> mapOfImpl = new HashMap<String,String>();
-		//store the file in a hashmap. key: the stem of the word and its complement (that/to). Value: the truth value
-		while ((strLine = br.readLine()) != null) { 
-			String sign = strLine.substring(0,strLine.lastIndexOf("_"));
-			String words = strLine.substring(strLine.indexOf("= ")+2);
-			String comple = strLine.substring(strLine.lastIndexOf("_"), strLine.indexOf("=")-1);
-			for (String word : words.split(" ")){
-				word = word.replace(",", "");
-				mapOfImpl.put(word+comple,sign);
-			}		
-		}
+		//graph.displayRoles();
+		//graph.displayDependencies();
 		//go through each node of the role graph and see if it is such a word
 		for (SemanticNode<?> node : graph.getRoleGraph().getNodes()){
 			if (!(node instanceof SkolemNode))
@@ -759,29 +794,34 @@ public class ContextMapper {
 			String stem = (String) ((SkolemNodeContent) node.getContent()).getStem();
 			// set the negation to false (negation alters the truth condition, thus we need it)
 			boolean isNeg = false;
-			// set the default complement to "z", "zero", when there is no complement at all
-			String comple = "_z";
+			// set the default complement to "n", "null", when there is no complement at all
+			String comple = "_n";
 			// go through the out edges of this node and extract negation and the complement, if present
 			Set<SemanticEdge> edgesOfNode = depGraph.getOutEdges(node);			
 			for (SemanticEdge edge : edgesOfNode){
 				if (edge.getLabel().equals("neg"))
-					isNeg = true;
-				// to get the complement we need to get to the level of the children of this node
-				SemanticNode<?> finish = graph.getFinishNode(edge);
-				for (SemanticEdge e : depGraph.getOutEdges(finish)){
-					if (e.getLabel().equals("mark") && e.getDestVertexId().contains("that_")){
-						comple = "_that";
-						break;
-					}
-					else if (e.getLabel().equals("mark") && e.getDestVertexId().contains("to_")){
-						comple = "_to";
-						break;
-					}
+					isNeg = true;					
+			}
+			Set<SemanticEdge> roleEdgesOfNode = graph.getRoleGraph().getOutEdges(node);
+			for (SemanticEdge edge : roleEdgesOfNode){
+				if ( edge.getLabel().equals("sem_xcomp")){
+					comple = "_to";
+					break;
 				}
+				if (edge.getLabel().equals("sem_comp")){
+					comple = "_that";
+					break;
+				}
+				if (edge.getLabel().equals("sem_obj"))
+					comple = "_other";
 			}
 			// if the hash does not contain a key with this stem and this complement, go to the next node
-			if (!mapOfImpl.containsKey(stem+comple))
-				continue;
+			if (!mapOfImpl.containsKey(stem+comple)){
+				if (!comple.equals("_n"))
+					comple = "_other";
+				if (!mapOfImpl.containsKey(stem+comple)) 
+					continue;
+			}
 			String truth;
 			// depending on whether there is negaiton or not, take the correct truth condition
 			if (isNeg == true){
@@ -794,11 +834,11 @@ public class ContextMapper {
 			ContextHeadEdge labelEdge = null;
 			// depending on the turht value, create the correct edge
 			if (truth.equals("N")){
-				labelEdge = new ContextHeadEdge(GraphLabels.UNINST, new  RoleEdgeContent());
+				labelEdge = new ContextHeadEdge(GraphLabels.ANTIVER, new  RoleEdgeContent());
 			} else if (truth.equals("P")){
-				labelEdge = new ContextHeadEdge(GraphLabels.INST, new  RoleEdgeContent());
+				labelEdge = new ContextHeadEdge(GraphLabels.VER, new  RoleEdgeContent());
 			}  else if (truth.equals("U")){
-				labelEdge = new ContextHeadEdge(GraphLabels.UNCERT, new  RoleEdgeContent());
+				labelEdge = new ContextHeadEdge(GraphLabels.AVER, new  RoleEdgeContent());
 			}  
 			// add the edge and the nodes to the context graph
 			SemanticNode<?> ctxOfImpl = addSelfContextNodeAndEdgeToGraph(node);
@@ -810,7 +850,7 @@ public class ContextMapper {
 							&& graph.getRoleGraph().getInEdges(child).size() < 2){
 						SemanticNode<?> ctxOfChild = addSelfContextNodeAndEdgeToGraph(child);
 						graph.addContextEdge(labelEdge,ctxOfImpl, ctxOfChild);
-						((SkolemNodeContent) child.getContent()).setContext(ctxOfChild.getLabel());
+						((SkolemNodeContent) child.getContent()).setContext(ctxOfImpl.getLabel());
 					}
 				}
 			}	
