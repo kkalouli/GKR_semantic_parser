@@ -513,7 +513,7 @@ public class SenseMappingsRetriever {
 		
 		if (!matched.equals("")) {
 			if (matched.contains("&%")){
-				senseToReturn = matched.substring(matched.indexOf("&%")); //+2
+				senseToReturn = matched.substring(matched.indexOf("&%")+2); //+2
 			} 
 			if (matched.contains("@") && matched.indexOf("@") != matched.length()-1 && matched.contains("|")){
 				String hypernymsStr = matched.substring(matched.indexOf("@")+1,matched.indexOf("|"));

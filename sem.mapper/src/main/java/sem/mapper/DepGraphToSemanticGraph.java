@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -109,8 +110,7 @@ public class DepGraphToSemanticGraph {
 	 */
 	private void stanChildrenToSemGraphChildren(IndexedWord parent, SkolemNode parentNode){
 		// get the children
-		List<SemanticGraphEdge> children = stanGraph.outgoingEdgeList(parent); //.childPairs(parent);
-		//List<Pair<GrammaticalRelation, IndexedWord>> children = stanGraph.childPairs(parent);
+		List<SemanticGraphEdge> children = stanGraph.outgoingEdgeList(parent);
 		// iterate through the children
 		for (SemanticGraphEdge child : children){
 			if (traversed.contains(child)){
@@ -119,13 +119,13 @@ public class DepGraphToSemanticGraph {
 			traversed.add(child);
 			// get the role relation of the child and create a role edge
 			String role = "";
-			if (child.getRelation().getSpecific() == null)//(child.first().getSpecific() == null)
-				role = child.getRelation().getShortName(); //child.first().getShortName();
+			if (child.getRelation().getSpecific() == null)
+				role = child.getRelation().getShortName(); 
 			else
-				role = child.getRelation().getShortName()+":"+child.getRelation().getSpecific();//child.first().getShortName()+":"+child.first().getSpecific();
+				role = child.getRelation().getShortName()+":"+child.getRelation().getSpecific();
 			RoleEdge roleEdge = new RoleEdge(role, new RoleEdgeContent());
 			// get the child's lemma
-			String dependent = child.getDependent().lemma(); //child.second().lemma();
+			String dependent = child.getDependent().lemma(); 
 			// create a SkolemNodeContent for the child and create a SkolemNode
 			SkolemNodeContent dependentContent = new SkolemNodeContent();
 			dependentContent.setSurface(child.getDependent().originalText());
@@ -138,18 +138,17 @@ public class DepGraphToSemanticGraph {
 			dependentContent.setSkolem(dependent+"_"+Integer.toString(positionD.intValue()));
 			SkolemNode finish = new SkolemNode(dependentContent.getSkolem(), dependentContent);
 			/* check if the same node already exist and if so use the existing node as the finish node
-			this is necessary for sentences with coordination; otherwise, the coord node is inserted twice
-			because of the exlpicit enchanced dependencies*/
+			this is necessary for sentences with coordination or control/raising verbs; otherwise, the coord node /controlled subj is inserted twice
+			because of the explicit enhanced dependencies*/
 			for (SemanticNode<?> node : graph.getDependencyGraph().getNodes()){
 					if (node.getLabel().equals(finish.getLabel())){
 						finish = (SkolemNode) node;
 					}
 			}
-			//SkolemNode finish = new SkolemNode(dependentContent.getSkolem(), dependentContent);
-			// add the dependency between the parent and the current child
-			if (parentNode.equals(finish))
-				continue;
-			graph.addDependencyEdge(roleEdge, parentNode, finish);
+			// add the dependency between the parent and the current child only if the parentNode != finish, otherwise loops
+			if (!parentNode.equals(finish)){
+				graph.addDependencyEdge(roleEdge, parentNode, finish);
+			}
 			
 			// recursively, go back and do the same for each of the children of the child
 			stanChildrenToSemGraphChildren(child.getDependent(), finish);		
@@ -165,7 +164,8 @@ public class DepGraphToSemanticGraph {
 	private void integrateDependencies(){
 		// get the root node of the stanford graph
 		IndexedWord rootN = stanGraph.getFirstRoot();
-		//stanGraph.prettyPrint();
+		stanGraph.prettyPrint();
+		//System.out.println(stanGraph.toCompactString());
 		// create a new node for the semantic graph and define all its features 
 		SkolemNodeContent rootContent = new SkolemNodeContent();
 		rootContent.setSurface(rootN.originalText());
@@ -180,7 +180,61 @@ public class DepGraphToSemanticGraph {
 		// add the node as root node to the graph
 		graph.setRootNode(root);
 		// based on the root node, go and find all children (and children of children)
-		stanChildrenToSemGraphChildren(rootN, root);		
+		stanChildrenToSemGraphChildren(rootN, root);
+		
+		/* in case there is implicit coordination in the sentence, then the implied node has not been added to the dep graph so far
+		 * (see line 143-150 above) because there would be a double node which is false or there would be a loop which is also not ok
+		 * e.g. Abram works for Devito or for Chiang. : a second works is implied before the second PP.
+		 * In such cases the coordinated nodes are inserted as simple uncoordinated nodes in the dep graph and thus
+		 * we need to extra add the coordination node now, otherwise we will miss it
+		 *   
+		 */
+		boolean foundCC = false;
+		boolean foundConj = false;
+		String cc = "";
+		// hash holding all dep edges sofar
+		HashMap<String,SemanticEdge> edgesCC = new HashMap<String, SemanticEdge>();
+		// list holding all edges that are coordinated without being linked with a conj node. The odd indices of the list are the "main"
+		//part of the coordination and the even indices of the list are the node to be made "dependent" on the odd node 
+		ArrayList<SemanticEdge> coordEdges = new ArrayList<SemanticEdge>(); 		
+		for (SemanticEdge edge : graph.getDependencyGraph().getEdges()){
+			// create a key with the edge lable and the source node: coordinated nodes will have the same edge label and the same source node
+			String key = edge.getLabel()+"_"+edge.getSourceVertexId();
+			if (edgesCC.get(key) == null){
+				edgesCC.put(key, edge);
+			// if the key already exists, it means that there is coordination and that this and the other edge are put into the coordEdges
+			} else if (edgesCC.get(key) != null){
+				coordEdges.add(edgesCC.get(key));
+				coordEdges.add(edge);
+			}
+			// check to see if there is cc anyway
+			if (edge.getLabel().equals("cc")){
+				foundCC = true;
+				cc = graph.getDependencyGraph().getEndNode(edge).getLabel();
+			}
+			// check to see if there is conj
+			else if (edge.getLabel().contains("conj")){
+				foundConj = true;
+			}
+		}
+		// do the following only if there is cc but not conj (if there is conj, the case should have been dealt with before)
+		if (foundCC == true && foundConj == false){
+			for (int i =1; i < coordEdges.size(); i = i+2){
+				// get the current edge and the previous one
+				SemanticEdge current = coordEdges.get(i);
+				SemanticEdge previous = coordEdges.get(i-1);
+				// the new role edge will be netween the end node of the previous edge and the end node of the current edge
+				SemanticNode<?> end = graph.getDependencyGraph().getEndNode(current);
+				SemanticNode<?> start = graph.getDependencyGraph().getEndNode(previous);
+				RoleEdge roleEdge = new RoleEdge("conj:"+cc.substring(0,cc.indexOf("_")), new RoleEdgeContent());
+				// remove any double edges
+				if (end.equals(start)){
+					graph.removeDependencyEdge(current);
+				}else {
+					graph.addDependencyEdge(roleEdge, start, end);
+				}
+			}
+		}
 	}
 	
 	/**
@@ -451,9 +505,9 @@ public class DepGraphToSemanticGraph {
 
 	public static void main(String args[]) throws IOException {
 		DepGraphToSemanticGraph semConverter = new DepGraphToSemanticGraph();
-		semConverter.processTestsuite("/Users/kkalouli/Documents/Stanford/comp_sem/forDiss/HP_testsuite_shortened_active.txt", semConverter);
-		/*DepGraphToSemanticGraph semGraph = new DepGraphToSemanticGraph();
-		semantic.graph.SemanticGraph graph = semGraph.sentenceToGraph("The boy faked the illness.", semGraph);
+		//semConverter.processTestsuite("/Users/kkalouli/Documents/Stanford/comp_sem/forDiss/HP_testsuite_shortened_active.txt", semConverter);
+		DepGraphToSemanticGraph semGraph = new DepGraphToSemanticGraph();
+		semantic.graph.SemanticGraph graph = semGraph.sentenceToGraph("Abrams and Devito work for Browne.", semGraph);
 		graph.displayDependencies();
 		//graph.displayProperties();
 		//graph.displayLex();
@@ -464,6 +518,6 @@ public class DepGraphToSemanticGraph {
 		System.out.println(graph.displayAsString());
 		for (SemanticNode<?> node : graph.getDependencyGraph().getNodes()){
 				System.out.println(node.getLabel()+((SkolemNodeContent) node.getContent()).getContext());
-		}*/
+		}
 	}
 }

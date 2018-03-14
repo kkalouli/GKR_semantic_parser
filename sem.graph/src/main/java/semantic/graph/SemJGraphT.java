@@ -61,7 +61,7 @@ public class SemJGraphT implements SemGraph, Serializable {
 		if (!graph.containsVertex(end)) {
 			addNode(end);
 		}
-		graph.addEdge(start, end, edge);	
+		graph.addEdge(start, end, edge);			
 		edge.sourceVertexId = start.label;
 		edge.destVertexId = end.label;
 	}

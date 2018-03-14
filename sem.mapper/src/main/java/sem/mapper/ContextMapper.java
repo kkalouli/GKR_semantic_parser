@@ -174,7 +174,8 @@ public class ContextMapper {
 					|| ((SkolemNodeContent) node.getContent()).getStem().equals("must")
 					|| ((SkolemNodeContent) node.getContent()).getStem().equals("can")
 					|| ((SkolemNodeContent) node.getContent()).getStem().equals("could")
-					|| ((SkolemNodeContent) node.getContent()).getStem().equals("would")){
+					|| ((SkolemNodeContent) node.getContent()).getStem().equals("would")
+					|| ((SkolemNodeContent) node.getContent()).getStem().equals("need")){
 				// create the self node of the modal
 				SemanticNode<?> modalNode = addSelfContextNodeAndEdgeToGraph(node);
 				// get the head of the modal
@@ -224,7 +225,7 @@ public class ContextMapper {
 					ContextHeadEdge labelEdgeHead = new ContextHeadEdge(label, new  RoleEdgeContent());
 					graph.addContextEdge(labelEdgeHead, modalNode, headNode);		
 					// create and edge between the negation_context node and the modal (so that the negation is over the modal)
-					ContextHeadEdge labelEdgeCan = new ContextHeadEdge("not", new  RoleEdgeContent());
+					ContextHeadEdge labelEdgeCan = new ContextHeadEdge(GraphLabels.NOT, new  RoleEdgeContent());
 					graph.addContextEdge(labelEdgeCan, negModalNode, modalNode);
 					// re-set the context of the head of the modal to the ctx of that head  
 					((SkolemNodeContent) head.getContent()).setContext(headNode.getLabel());
@@ -270,7 +271,8 @@ public class ContextMapper {
 			 * --> the head of the negation is a predicate and all arguments exist in top
 			 */
 			if (((SkolemNodeContent) node.getContent()).getStem().equals("not") 
-					|| ((SkolemNodeContent) node.getContent()).getStem().equals("n't") ){			
+					|| ((SkolemNodeContent) node.getContent()).getStem().equals("n't")
+					|| ((SkolemNodeContent) node.getContent()).getStem().equals("never")){			
 				// initialize the head of the negation
 				SemanticNode<?> head = null;
 				// initialize the context of the head of the negation
@@ -823,6 +825,7 @@ public class ContextMapper {
 					continue;
 			}
 			String truth;
+			//System.out.println(mapOfImpl);
 			// depending on whether there is negaiton or not, take the correct truth condition
 			if (isNeg == true){
 				truth = mapOfImpl.get(stem+comple).split("_")[1];
@@ -843,17 +846,31 @@ public class ContextMapper {
 			// add the edge and the nodes to the context graph
 			SemanticNode<?> ctxOfImpl = addSelfContextNodeAndEdgeToGraph(node);
 			Set<SemanticNode<?>>children = graph.getRoleGraph().getOutNeighbors(node);
+			boolean foundComplAsChild = false;
 			for (SemanticNode<?> child : children){
 				if (child instanceof SkolemNode){
-				// only the children after the current node and with less than 2 in edges should be considered
-					if (((SkolemNodeContent) child.getContent()).getPosition() > ((SkolemNodeContent) node.getContent()).getPosition()
-							&& graph.getRoleGraph().getInEdges(child).size() < 2){
+					SemanticEdge edgeToChild = graph.getRoleGraph().getEdges(node, child).iterator().next();
+					if (edgeToChild.getLabel().equals("sem_comp") || edgeToChild.getLabel().equals("sem_xcomp") ){
 						SemanticNode<?> ctxOfChild = addSelfContextNodeAndEdgeToGraph(child);
 						graph.addContextEdge(labelEdge,ctxOfImpl, ctxOfChild);
 						((SkolemNodeContent) child.getContent()).setContext(ctxOfImpl.getLabel());
+						foundComplAsChild = true;
 					}
 				}
+			}
+			if (foundComplAsChild == false){
+				for (SemanticNode<?> child : children){
+					if (child instanceof SkolemNode){
+						// only the children after the current node and with less than 2 in edges should be considered
+						if (((SkolemNodeContent) child.getContent()).getPosition() > ((SkolemNodeContent) node.getContent()).getPosition()
+								&& graph.getRoleGraph().getInEdges(child).size() < 2){
+							SemanticNode<?> ctxOfChild = addSelfContextNodeAndEdgeToGraph(child);
+							graph.addContextEdge(labelEdge,ctxOfImpl, ctxOfChild);
+							((SkolemNodeContent) child.getContent()).setContext(ctxOfImpl.getLabel());
+						}
+					}
+				}	
 			}	
 		}
-	}	
+	}
 }

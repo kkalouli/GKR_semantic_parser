@@ -699,6 +699,8 @@ public class SemanticGraph implements Serializable {
 		// get the entryset of the new sorted linked hashmap
 		Set<Entry<String, List<SemanticEdge>>> entrySetSortedByValue = sortedByValue.entrySet(); 
 		
+		ArrayList<String> insertedStrings = new ArrayList<String>();
+		
 		// go through the ordered linked hashmap and reorder the entries to write
 		for(Entry<String, List<SemanticEdge>> mapping : entrySetSortedByValue){
 			// initialize all variables because they wont be needed for the root node
@@ -723,8 +725,12 @@ public class SemanticGraph implements Serializable {
 			// there are as many tabs as the size of the value list
 			int tabs = mapping.getValue().size();
 			// create a string with so many tabs as tabs
-			String tabsToAdd = new String(new char[tabs]).replace("\0", "\t");			
-			stringToDisplay.insert(indexAfterParent, "\n"+tabsToAdd+labelOfLastEdgeOfValueList+":"+mapping.getKey().replace("$", "")); 
+			String tabsToAdd = new String(new char[tabs]).replace("\0", "\t");	
+			String toInsert = tabsToAdd+labelOfLastEdgeOfValueList+":"+mapping.getKey().replace("$", "");
+			if (!insertedStrings.contains(toInsert)){
+				stringToDisplay.insert(indexAfterParent, "\n"+toInsert);
+				insertedStrings.add(toInsert);
+			}
 		} 
 		
 		stringToDisplay.replace(0, 1, "");
