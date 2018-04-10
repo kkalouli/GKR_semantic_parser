@@ -59,6 +59,7 @@ public class RolesMapper {
 	private ArrayList<SemanticEdge> combEdges;
 	// plain edges to be added to the role graph
 	private HashMap<String,SemanticEdge> edgesToAdd;
+	private ArrayList<SemanticEdge> edgesToRemove;
 	
 
 
@@ -79,6 +80,7 @@ public class RolesMapper {
 		this.traversedEdges = new ArrayList<SemanticEdge>();
 		this.edgesToAdd = new HashMap<String, SemanticEdge>();
 		this.traversedEdges = new ArrayList<SemanticEdge>();
+		this.edgesToRemove = new ArrayList<SemanticEdge>();
 		
 	}
 
@@ -89,6 +91,7 @@ public class RolesMapper {
 	 * then split sentences to separate graphs. 
 	 */
 	public void integrateAllRoles(){
+		//graph.displayDependencies();
 		SemGraph depGraph = graph.getDependencyGraph();
 		// at the first run, add the current graph to the graphsToProcess
 		if (graphsToProcess.isEmpty())
@@ -157,6 +160,8 @@ public class RolesMapper {
 			}
 		}
 		
+		checkForMoreThanDoubleCoordination();
+		
 	}
 
 	/**
@@ -171,16 +176,20 @@ public class RolesMapper {
 				continue;
 			else if (traversed.contains(edge))
 				continue;
+			else if (edgesToRemove.contains(edge))
+				continue;
 			SemanticNode<?> start = depGraph.getStartNode(edge);
 			SemanticNode<?> finish = depGraph.getEndNode(edge);
 			// integrate the basic roles for these edges
 			integrateBasicRoles(start,finish,edge.getLabel());
 			traversed.add(edge);
 		}
+		//graph.displayRoles();
 		// list that holds all lists of begin-end-node-pairs that have alread been added
 		ArrayList<ArrayList<SemanticNode<?>>> addedComb = new ArrayList<ArrayList<SemanticNode<?>>>();
 		// go through the combEdges (= edges that involve coordinated node)
 		for (SemanticEdge edge : combEdges){
+			//graph.displayRoles();
 			// get start and finish node of the current edge
 			SemanticNode<?> start = depGraph.getStartNode(edge);
 			SemanticNode<?> finish = depGraph.getEndNode(edge);
@@ -192,16 +201,23 @@ public class RolesMapper {
 			*/
 			for (SemanticNode<?> rNode : graph.getRoleGraph().getNodes()){
 				if (rNode.equals(start)){
-					// if this edge is an edge of a combined node, then the combined node gets to be the parent
-					if (!graph.getRoleGraph().getInNeighbors(rNode).isEmpty()){
-						SemanticNode<?> combNode = graph.getRoleGraph().getInNeighbors(rNode).iterator().next();
-						begin = combNode;
+					// if this edge is an edge of a combined node, then the combined node gets to be the parent, unless there is a relative clause in which case we
+					// need to exclude it otherwise, there will be a combNode as start and end node and it wont be added at all to the graph 
+					//if (!graph.getRoleGraph().getInNeighbors(rNode).isEmpty() && !edge.getLabel().equals("acl:relcl")){
+					for (SemanticEdge ed : graph.getRoleGraph().getInEdges(rNode)){
+						if (ed.getLabel().equals("is_element")){
+							SemanticNode<?> combNode = graph.getStartNode(ed);
+							begin = combNode;
+						}
 					}
 				} else if (rNode.equals(finish) ){
 					// if this edge is an edge of a combined node, then the combined node gets to be the parent
-					if (!graph.getRoleGraph().getInNeighbors(rNode).isEmpty()){
-						SemanticNode<?> combNode = graph.getRoleGraph().getInNeighbors(rNode).iterator().next();
-						end = combNode;
+					//if (!graph.getRoleGraph().getInNeighbors(rNode).isEmpty()){
+					for (SemanticEdge ed : graph.getRoleGraph().getInEdges(rNode)){
+						if (ed.getLabel().equals("is_element")){
+							SemanticNode<?> combNode = graph.getStartNode(ed);
+							end = combNode;
+						}
 					}
 				}
 			}
@@ -288,12 +304,13 @@ public class RolesMapper {
 		if (edgesToAdd.get(keyDest) == null){
 			edgesToAdd.put(keyDest, edge);
 		}
-		// if it already exists, then it means that this destination node is involved in a coordinated node and has to move to the combEdges
-		else if (edgesToAdd.get(keyDest) != null){
+		// if it already exists, then it means that this destination edge is involved in a coordinated edge and has to move to the combEdges
+		else if (edgesToAdd.get(keyDest) != null){	
 			//add the previous same edge to combEdges
 			combEdges.add(edgesToAdd.get(keyDest));
 			// remove the previous same key from the hashmap
-			edgesToAdd.remove(keyDest);
+			edgesToRemove.add(edge);
+			//edgesToAdd.remove(keyDest);
 			// add the current edge to combEdges
 			combEdges.add(edge);
 		}
@@ -301,14 +318,23 @@ public class RolesMapper {
 		if (edgesToAdd.get(keySource) == null){
 			edgesToAdd.put(keySource, edge);
 		}
-		// if it already exists, then it means that this source node is involved in a coordinated node and has to move to the combEdges
+		/* if it already exists, then it means that this source edge is involved in a coordinated edge and has to move to the combEdges,
+		 * but only if the start node of the existing edge is the same (equals) as the start node of this edge, e.g. The man and the woman are walking.
+		 * If the start nodes are not the same, e.g. The man works for John and for Mary. (a second node of "works" is inserted here and this does not
+		 * equal the first node "works"), then this edge should normally be added to the edgesToAdd and not to the combEdges. 
+		*/
 		else if (edgesToAdd.get(keySource) != null){
-			//add the previous same edge to combEdges
-			combEdges.add(edgesToAdd.get(keySource));
-			// remove the previous same key from the hashmap
-			edgesToAdd.remove(keySource);
-			// add the current edge to combEdges
-			combEdges.add(edge);
+			if (graph.getDependencyGraph().getStartNode(edgesToAdd.get(keySource)).equals(graph.getStartNode(edge))){
+				//add the previous same edge to combEdges
+				combEdges.add(edgesToAdd.get(keySource));
+				// remove the previous same key from the hashmap
+				edgesToRemove.add(edge);
+				//edgesToAdd.remove(keySource);
+				// add the current edge to combEdges
+				combEdges.add(edge);
+			} else {
+				edgesToAdd.put(keyDest, edge);
+			}
 		}	
 		
 		// if there is verb coordination but the subjects of the two corodinated verbs are different, then there is clause coordination
@@ -346,7 +372,7 @@ public class RolesMapper {
 		// only go here if there is coordination in the current edge 
 		if (edgeLabel.contains("conj") ){
 			// create the combined node of the coordinated terms and the edge of one of its children
-			if (!graph.getRoleGraph().containsNode(start) && !graph.getRoleGraph().containsNode(finish)){
+			if (graph.getRoleGraph().getEdges(start, finish).isEmpty() ){//!graph.getRoleGraph().containsNode(start) && !graph.getRoleGraph().containsNode(finish)  ){
 				TermNode combNode = new TermNode(start+"_"+edgeLabel.substring(5)+"_"+finish, new TermNodeContent());
 				role = GraphLabels.IS_ELEMENT;
 				RoleEdge combEdge1 = new RoleEdge(role, new RoleEdgeContent());
@@ -362,6 +388,67 @@ public class RolesMapper {
 			((SkolemNodeContent) start.getContent()).setContext("top");
 			((SkolemNodeContent) finish.getContent()).setContext("top");
 		}
+	}
+	
+	/*
+	 * Check if there is more than double coordination.e.g There is Abrams, Browne and Chiang.
+	 */
+	private void checkForMoreThanDoubleCoordination(){
+		ArrayList<SemanticNode<?>> coordNodes = new ArrayList<SemanticNode<?>>();
+		ArrayList<SemanticNode<?>> termNodes = new ArrayList<SemanticNode<?>>();
+		// get through the role graph and see if there are any nodes that are coordinated 
+		for (SemanticNode<?> node : graph.getRoleGraph().getNodes()){
+			ArrayList<SemanticEdge> isElementEdges = new ArrayList<SemanticEdge>();
+			for (SemanticEdge edge : graph.getInEdges(node)){
+				if (edge.getLabel().equals("is_element") && graph.getStartNode(edge) instanceof TermNode){				
+					isElementEdges.add(edge);
+				}
+			}
+			if (!isElementEdges.isEmpty() && isElementEdges.size() > 1){
+				for (SemanticEdge ele : isElementEdges){
+					if (!coordNodes.containsAll(graph.getOutNeighbors(graph.getStartNode(ele)))){
+						coordNodes.addAll(graph.getOutNeighbors(graph.getStartNode(ele)));
+					}
+					if (!termNodes.contains(graph.getStartNode(ele))){
+						termNodes.add(graph.getStartNode(ele));
+					}			
+				}
+			}
+		}
+		String label = "";
+		String ele = "";
+		ArrayList<SemanticEdge> inEdges = new ArrayList<SemanticEdge>();
+		for (SemanticNode<?> node : termNodes){
+			String name = node.getLabel();
+			String[] partsOfName = name.split("_(?=(and|or))");
+			if (!label.contains(partsOfName[0]+"_"))
+				label += partsOfName[0];
+			ele = partsOfName[1].substring(0,partsOfName[1].indexOf("_"));
+			label += "_"+ele+"_";
+			label += partsOfName[1].substring(partsOfName[1].indexOf("_")+1);
+			if (!inEdges.containsAll(graph.getRoleGraph().getInEdges(node)))
+				inEdges.addAll(graph.getRoleGraph().getInEdges(node));
+		}
+		TermNode combNode = new TermNode(label, new TermNodeContent());
+		
+		for (SemanticEdge ed : inEdges){
+			SemanticNode<?> start = graph.getStartNode(ed);
+			SemanticNode<?> finish = graph.getFinishNode(ed);
+			RoleEdge roleEdge = new RoleEdge(ed.getLabel(), new RoleEdgeContent());
+			graph.addRoleEdge(roleEdge, start, combNode);
+			graph.removeRoleNode(finish);
+		}
+		
+		String role = GraphLabels.IS_ELEMENT;
+		for (SemanticNode<?> node : coordNodes){
+			if (graph.getRoleGraph().getEdges(combNode, node).isEmpty() ){
+				RoleEdge combEdge = new RoleEdge(role, new RoleEdgeContent());
+				graph.addRoleEdge(combEdge, combNode, node);
+			}
+		}
+		
+		String test = "";
+		
 	}
 
 	/**
@@ -385,6 +472,8 @@ public class RolesMapper {
 		break;
 		// only add it when the verb coord is false; when true, it will be added later
 		case "nsubj" : role = GraphLabels.SUBJ;
+		break;
+		case "auxpass" : passive = true;
 		break;
 		// only add it when the verb coord is false; when true, it will be added later
 		case "nsubjpass" : role = GraphLabels.OBJ;
@@ -426,9 +515,9 @@ public class RolesMapper {
 		// nmod can have difefrent subtypes, therefore it is put here and not within the switch 
 		if (role.equals("") && edgeLabel.contains("nmod")){
 			role = GraphLabels.NMOD;
-		} else if (edgeLabel.contains("acl")){
+		} else if (role.equals("") && edgeLabel.contains("acl")){
 			role = GraphLabels.NMOD;	
-		}  else if (edgeLabel.contains("advcl")){
+		}  else if (role.equals("") && edgeLabel.contains("advcl")){
 			role = GraphLabels.AMOD;	
 		}
 		

@@ -41,8 +41,10 @@ public class ContextMapper {
 	private boolean disjunction;
 	private HashMap<SemanticNode<?>,String> implCtxs;
 	private HashMap<String,String> mapOfImpl;
+	private ArrayList<String> verbalForms;
 	
-	public ContextMapper(semantic.graph.SemanticGraph graph){
+	public ContextMapper(semantic.graph.SemanticGraph graph, ArrayList<String> verbalForms){
+		this.verbalForms = verbalForms;
 		this.graph = graph;
 		this.depGraph = this.graph.getDependencyGraph();
 		this.negCtxs = new HashMap<SemanticNode<?>,SemanticNode<?>>();
@@ -106,6 +108,7 @@ public class ContextMapper {
 		integrateModalContexts();	
 		//graph.displayContexts();
 		SemGraph conGraph = graph.getContextGraph();	
+		SemanticNode<?> predNode = null;
 		// make sure that all "root" nodes existing in the role graph have been added to the context graph; if not add them now
 		for (SemanticNode<?> node : graph.getRoleGraph().getNodes()){
 			boolean foundNode = false;
@@ -120,9 +123,24 @@ public class ContextMapper {
 				// if it doesnt, add it now to the contxex graph
 				if (foundNode == false)
 					addSelfContextNodeAndEdgeToGraph(node);
+			// if there are no "root" nodes at all (all nodes have incoming edges), then there is probably a copula verb with a relative clause 
+			} else{
+				for (SemanticEdge ed : graph.getRoleGraph().getInEdges(node)){
+					// get the head of the relative clause which is also the predicate ans store it in the predNode
+					if (ed.getLabel().equals("rstr")){
+						predNode = graph.getStartNode(ed);
+						break;
+					}
+				}
+				
 			}
 
+		}		
+		// if the conGraph does not have any ndoes up until now, add the predNode as ctx
+		if (conGraph.getNodes().isEmpty() && predNode != null){
+			addSelfContextNodeAndEdgeToGraph(predNode);
 		}
+		
 		// make sure that the context graph is left with one top context; if there are more than one "tops", then
 		//merge the two tops to one
 		int noOfTops = 0;
@@ -151,15 +169,7 @@ public class ContextMapper {
 		for (SemanticNode<?> top : listOfTops){
 			graph.removeContextNode(top);
 		}
-		
-		
-		/*for (SemanticNode<?> rNode: graph.getRoleGraph().getNodes()){
-			if (rNode instanceof SkolemNode && ((SkolemNodeContent) rNode.getContent()).getContext().equals("top") && !conGraph.getNodes().contains(rNode)){
-				SemanticNode<?> parent = graph.getRoleGraph().getInNeighbors(rNode).iterator().next();
-				if (parent instanceof SkolemNode && !((SkolemNodeContent) parent.getContent()).getContext().equals("top") )
-					((SkolemNodeContent) rNode.getContent()).setContext(((SkolemNode) parent).getContext());
-			}
-		}*/	
+			
 	}
 
 	/**
@@ -350,7 +360,7 @@ public class ContextMapper {
 				}
 
 				// create and add the edge between the negation and its head 
-				ContextHeadEdge labelEdge = new ContextHeadEdge(GraphLabels.NOT, new  RoleEdgeContent());
+				ContextHeadEdge labelEdge = new ContextHeadEdge(GraphLabels.ANTIVER, new  RoleEdgeContent());
 				graph.addContextEdge(labelEdge, negNode, ctxHead);	
 				// put the negated node created and its head to the hash
 				negCtxs.put(negNode, head);
@@ -443,7 +453,7 @@ public class ContextMapper {
 				}
 
 				// create and add the edge between the negation and the head of its head 
-				ContextHeadEdge labelEdge = new ContextHeadEdge(GraphLabels.NOT, new  RoleEdgeContent());
+				ContextHeadEdge labelEdge = new ContextHeadEdge(GraphLabels.ANTIVER, new  RoleEdgeContent());
 				graph.addContextEdge(labelEdge, negNode, ctxHead);
 				// the negated argument must be instantiated within the context of its head; it doesnt belong to top anymore		
 				ContextHeadEdge instEdge = new ContextHeadEdge(GraphLabels.VER, new  RoleEdgeContent());
@@ -556,7 +566,7 @@ public class ContextMapper {
 			}
 
 				// create and add the edge between the negation and the head of its head 
-				ContextHeadEdge labelEdge = new ContextHeadEdge(GraphLabels.NOT, new  RoleEdgeContent());
+				ContextHeadEdge labelEdge = new ContextHeadEdge(GraphLabels.ANTIVER, new  RoleEdgeContent());
 				graph.addContextEdge(labelEdge, negNode, ctxHead);
 				//depending on the word, we need a new node to carry the meaning
 				SemanticNode<?> finish = null;
@@ -612,7 +622,7 @@ public class ContextMapper {
 		ContextHeadEdge cHEdge = new ContextHeadEdge(GraphLabels.CONTEXT_HEAD, new  RoleEdgeContent());
 		SemanticNode<?> start = new ContextNode("ctx("+node.getLabel()+")", new ContextNodeContent());
 		for (SemanticNode<?> contextN : graph.getContextGraph().getNodes()){
-			if (start.getLabel().equals(contextN.getLabel())){
+			if (start.getLabel().equals(contextN.getLabel()) && !verbalForms.contains(((SkolemNode) node).getPartOfSpeech())){
 				start = contextN;
 			}
 		}

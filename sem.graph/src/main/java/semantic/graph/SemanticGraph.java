@@ -19,11 +19,13 @@ import org.springframework.util.SerializationUtils;
 import semantic.graph.vetypes.ContextNode;
 import semantic.graph.vetypes.GraphLabels;
 import semantic.graph.vetypes.LexEdge;
+import semantic.graph.vetypes.PropertyEdge;
 import semantic.graph.vetypes.RoleEdge;
 import semantic.graph.vetypes.SenseNode;
 import semantic.graph.vetypes.SkolemNode;
 import semantic.graph.vetypes.SkolemNodeContent;
 import semantic.graph.vetypes.TermNode;
+import semantic.graph.vetypes.ValueNode;
 
 
 
@@ -493,14 +495,74 @@ public class SemanticGraph implements Serializable {
 	 * Open a window displaying the property graph
 	 */
 	public void displayProperties() {
-		this.propertyGraph.display();
+		//this.propertyGraph.display();
+		Set<SemanticNode<?>> nodes = new HashSet<SemanticNode<?>>();
+		Set<SemanticEdge> edges = new HashSet<SemanticEdge>();
+		Map<Color, List<SemanticNode<?>>> nodeProperties = new HashMap<Color, List<SemanticNode<?>>>();
+		Map<Color, List<SemanticEdge>> edgeProperties = new HashMap<Color,List<SemanticEdge>>();
+		List<SemanticNode<?>> propertyNodes = new ArrayList<SemanticNode<?>>();
+		nodeProperties.put(Color.YELLOW, propertyNodes);
+		List<SemanticEdge> propertyEdges = new ArrayList<SemanticEdge>();
+		edgeProperties.put(Color.YELLOW, propertyEdges);
+		List<SemanticNode<?>> roleNodes = new ArrayList<SemanticNode<?>>();
+		nodeProperties.put(Color.BLUE, roleNodes);
+		List<SemanticEdge> roleEdges = new ArrayList<SemanticEdge>();
+		edgeProperties.put(Color.BLUE, roleEdges);
+		
+		for (SemanticNode<?> rNode : this.propertyGraph.getNodes()) {
+			nodes.add(rNode);
+			if (rNode instanceof ValueNode)
+				propertyNodes.add(rNode);
+			else if (rNode instanceof SkolemNode)
+				roleNodes.add(rNode);
+		}
+		for (SemanticEdge rEdge : this.propertyGraph.getEdges()) {
+			edges.add(rEdge);
+			if (rEdge instanceof PropertyEdge)
+				propertyEdges.add(rEdge);
+			else if (rEdge instanceof RoleEdge)
+				roleEdges.add(rEdge);
+		}
+		
+		SemGraph subGraph = this.graph.getSubGraph(nodes, edges);
+		subGraph.display(nodeProperties, edgeProperties);
 	}
 
 	/**
 	 * Open a window displaying the lexical graph
 	 */
 	public void displayLex() {
-		this.lexGraph.display();
+		//this.lexGraph.display();
+		Set<SemanticNode<?>> nodes = new HashSet<SemanticNode<?>>();
+		Set<SemanticEdge> edges = new HashSet<SemanticEdge>();
+		Map<Color, List<SemanticNode<?>>> nodeProperties = new HashMap<Color, List<SemanticNode<?>>>();
+		Map<Color, List<SemanticEdge>> edgeProperties = new HashMap<Color,List<SemanticEdge>>();
+		List<SemanticNode<?>> lexNodes = new ArrayList<SemanticNode<?>>();
+		nodeProperties.put(Color.CYAN, lexNodes);
+		List<SemanticEdge> lexEdges = new ArrayList<SemanticEdge>();
+		edgeProperties.put(Color.CYAN, lexEdges);
+		List<SemanticNode<?>> roleNodes = new ArrayList<SemanticNode<?>>();
+		nodeProperties.put(Color.BLUE, roleNodes);
+		List<SemanticEdge> roleEdges = new ArrayList<SemanticEdge>();
+		edgeProperties.put(Color.BLUE, roleEdges);
+		
+		for (SemanticNode<?> rNode : this.lexGraph.getNodes()) {
+			nodes.add(rNode);
+			if (rNode instanceof SenseNode)
+				lexNodes.add(rNode);
+			else if (rNode instanceof SkolemNode)
+				roleNodes.add(rNode);
+		}
+		for (SemanticEdge rEdge : this.lexGraph.getEdges()) {
+			edges.add(rEdge);
+			if (rEdge instanceof LexEdge)
+				lexEdges.add(rEdge);
+			else if (rEdge instanceof RoleEdge)
+				roleEdges.add(rEdge);
+		}
+		
+		SemGraph subGraph = this.graph.getSubGraph(nodes, edges);
+		subGraph.display(nodeProperties, edgeProperties);
 	}
 	
 	/**

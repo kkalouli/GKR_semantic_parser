@@ -137,11 +137,12 @@ public class DepGraphToSemanticGraph {
 			dependentContent.setDerived(false);	
 			dependentContent.setSkolem(dependent+"_"+Integer.toString(positionD.intValue()));
 			SkolemNode finish = new SkolemNode(dependentContent.getSkolem(), dependentContent);
-			/* check if the same node already exist and if so use the existing node as the finish node
-			this is necessary for sentences with coordination or control/raising verbs; otherwise, the coord node /controlled subj is inserted twice
-			because of the explicit enhanced dependencies*/
+			/* check if the same node already exists and if so, if it is a verb node. If it is no verb, then use the existing node as the finish node.
+			this is necessary for sentences with noun or different-verbs coordination or control/raising verbs; 
+			otherwise, the coord node /controlled subj is inserted twice because of the explicit enhanced dependencies. If however it is a verb (the same verb), 
+			then we have a sentence of the type John works for Mary and for Anna. where we have to assume to different (same) verbs. */
 			for (SemanticNode<?> node : graph.getDependencyGraph().getNodes()){
-					if (node.getLabel().equals(finish.getLabel())){
+					if (node.getLabel().equals(finish.getLabel()) && !role.contains("conj")){ //!verbalForms.contains(finish.getPartOfSpeech())){
 						finish = (SkolemNode) node;
 					}
 			}
@@ -189,7 +190,7 @@ public class DepGraphToSemanticGraph {
 		 * we need to extra add the coordination node now, otherwise we will miss it
 		 *   
 		 */
-		boolean foundCC = false;
+		/*boolean foundCC = false;
 		boolean foundConj = false;
 		String cc = "";
 		// hash holding all dep edges sofar
@@ -199,7 +200,11 @@ public class DepGraphToSemanticGraph {
 		ArrayList<SemanticEdge> coordEdges = new ArrayList<SemanticEdge>(); 		
 		for (SemanticEdge edge : graph.getDependencyGraph().getEdges()){
 			// create a key with the edge lable and the source node: coordinated nodes will have the same edge label and the same source node
-			String key = edge.getLabel()+"_"+edge.getSourceVertexId();
+			String key = "";
+			if (edge.getLabel().contains(":"))
+				key = edge.getLabel().substring(0,edge.getLabel().indexOf(":"))+"_"+edge.getSourceVertexId();
+			else
+				key = edge.getLabel()+"_"+edge.getSourceVertexId();
 			if (edgesCC.get(key) == null){
 				edgesCC.put(key, edge);
 			// if the key already exists, it means that there is coordination and that this and the other edge are put into the coordEdges
@@ -234,7 +239,7 @@ public class DepGraphToSemanticGraph {
 					graph.addDependencyEdge(roleEdge, start, end);
 				}
 			}
-		}
+		}*/
 	}
 	
 	/**
@@ -461,7 +466,7 @@ public class DepGraphToSemanticGraph {
 	 * Once the graph is created, go through it and assign contexts to each skolem of the dependency graph. 
 	 */
 	private void integrateContexts(){
-		ContextMapper ctxMapper = new ContextMapper(graph);
+		ContextMapper ctxMapper = new ContextMapper(graph, verbalForms);
 		ctxMapper.integrateAllContexts();
 	}
 	
@@ -504,12 +509,12 @@ public class DepGraphToSemanticGraph {
 
 
 	public static void main(String args[]) throws IOException {
-		DepGraphToSemanticGraph semConverter = new DepGraphToSemanticGraph();
+		//DepGraphToSemanticGraph semConverter = new DepGraphToSemanticGraph();
 		//semConverter.processTestsuite("/Users/kkalouli/Documents/Stanford/comp_sem/forDiss/HP_testsuite_shortened_active.txt", semConverter);
 		DepGraphToSemanticGraph semGraph = new DepGraphToSemanticGraph();
-		semantic.graph.SemanticGraph graph = semGraph.sentenceToGraph("Abrams and Devito work for Browne.", semGraph);
+		semantic.graph.SemanticGraph graph = semGraph.sentenceToGraph("The dog faked the illness.", semGraph);
 		graph.displayDependencies();
-		//graph.displayProperties();
+		graph.displayProperties();
 		//graph.displayLex();
 		graph.displayContexts();
 		graph.displayRoles();
