@@ -502,7 +502,7 @@ public class DepGraphToSemanticGraph {
 		DepGraphToSemanticGraph semConverter = new DepGraphToSemanticGraph();
 		semConverter.processTestsuite("/Users/kkalouli/Documents/Stanford/comp_sem/SICK/SICK_unique_sent_for_parser.csv", semConverter);
 		/*DepGraphToSemanticGraph semGraph = new DepGraphToSemanticGraph();
-		semantic.graph.SemanticGraph graph = semGraph.sentenceToGraph("None of the students and the teachers are coming.", semGraph);
+		semantic.graph.SemanticGraph graph = semGraph.sentenceToGraph("A Seadoo is being ridden by a woman.", semGraph);
 		graph.displayDependencies();
 		graph.displayProperties();
 		//graph.displayLex();

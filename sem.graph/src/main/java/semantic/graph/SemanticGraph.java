@@ -710,6 +710,9 @@ public class SemanticGraph implements Serializable {
 				if (n.equals(start) || roleGraph.getOutReach(n).contains(start)){
 					roleRoot = n;
 					break;
+				} else {
+					stringToDisplay.append("Sentence was parsed but not converted to string because of unconnected nodes in role graph");
+					return stringToDisplay.toString();
 				}
 			}			
 			// get the distance of each of the nodes from the root node

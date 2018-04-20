@@ -118,6 +118,8 @@ public class RolesMapper {
 				integrateCoordinatingRoles(start, finish, edge, edgeLabel);
 				verbCoord = false;
 				coord = false;
+				if (edge.getLabel().contains("pass"))
+					passive = true;
 			}
 			
 			// after dealing with coordination, add all the roles of the plain edges to the role graph		
