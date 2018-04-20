@@ -501,9 +501,9 @@ public class SemanticGraph implements Serializable {
 		Map<Color, List<SemanticNode<?>>> nodeProperties = new HashMap<Color, List<SemanticNode<?>>>();
 		Map<Color, List<SemanticEdge>> edgeProperties = new HashMap<Color,List<SemanticEdge>>();
 		List<SemanticNode<?>> propertyNodes = new ArrayList<SemanticNode<?>>();
-		nodeProperties.put(Color.YELLOW, propertyNodes);
+		nodeProperties.put(Color.MAGENTA, propertyNodes);
 		List<SemanticEdge> propertyEdges = new ArrayList<SemanticEdge>();
-		edgeProperties.put(Color.YELLOW, propertyEdges);
+		edgeProperties.put(Color.MAGENTA, propertyEdges);
 		List<SemanticNode<?>> roleNodes = new ArrayList<SemanticNode<?>>();
 		nodeProperties.put(Color.BLUE, roleNodes);
 		List<SemanticEdge> roleEdges = new ArrayList<SemanticEdge>();

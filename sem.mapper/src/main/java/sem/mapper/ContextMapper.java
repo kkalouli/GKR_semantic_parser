@@ -26,6 +26,7 @@ import semantic.graph.vetypes.ContextHeadEdge;
 import semantic.graph.vetypes.ContextNode;
 import semantic.graph.vetypes.ContextNodeContent;
 import semantic.graph.vetypes.GraphLabels;
+import semantic.graph.vetypes.RoleEdge;
 import semantic.graph.vetypes.RoleEdgeContent;
 import semantic.graph.vetypes.SkolemNode;
 import semantic.graph.vetypes.SkolemNodeContent;
@@ -90,8 +91,6 @@ public class ContextMapper {
 	 * @throws IOException 
 	 */
 	public void integrateAllContexts(){
-		//graph.displayRoles();
-		//graph.displayDependencies();
 		try {
 			integrateImplicativeContexts();
 		} catch (IOException e) {
@@ -177,15 +176,16 @@ public class ContextMapper {
 	 */
 	private void integrateModalContexts(){
 		Set<SemanticNode<?>> nodes = depGraph.getNodes();
-		for (SemanticNode<?> node : nodes){
+		for (SemanticNode<?> node : nodes){	
 			if (((SkolemNodeContent) node.getContent()).getStem().equals("might") 
 					|| ((SkolemNodeContent) node.getContent()).getStem().equals("should")
 					|| ((SkolemNodeContent) node.getContent()).getStem().equals("may")
 					|| ((SkolemNodeContent) node.getContent()).getStem().equals("must")
 					|| ((SkolemNodeContent) node.getContent()).getStem().equals("can")
 					|| ((SkolemNodeContent) node.getContent()).getStem().equals("could")
-					|| ((SkolemNodeContent) node.getContent()).getStem().equals("would")
-					|| ((SkolemNodeContent) node.getContent()).getStem().equals("need")){
+					|| ((SkolemNodeContent) node.getContent()).getStem().equals("ought")
+					|| ((SkolemNodeContent) node.getContent()).getStem().equals("need")
+					|| ((SkolemNodeContent) node.getContent()).getStem().equals("would")){
 				// create the self node of the modal
 				SemanticNode<?> modalNode = addSelfContextNodeAndEdgeToGraph(node);
 				// get the head of the modal
@@ -220,11 +220,12 @@ public class ContextMapper {
 				 */
 				else if (((SkolemNodeContent) node.getContent()).getStem().equals("can") 
 						|| ((SkolemNodeContent) node.getContent()).getStem().equals("could")
+						|| ((SkolemNodeContent) node.getContent()).getStem().equals("need")
 						|| ((SkolemNodeContent) node.getContent()).getStem().equals("would")){
 					// remove all edges and nodes that are dependent on the negation_context node
 					for (SemanticNode<?> sNode : graph.getContextGraph().getOutNeighbors(negModalNode)){
 						for (SemanticEdge sEdge : graph.getContextGraph().getEdges(sNode)){
-							if (sEdge.getLabel().equals("not")){
+							if (sEdge.getLabel().equals("antiveridical")){
 								headNode = graph.getContextGraph().getEndNode(sEdge);
 								graph.getContextGraph().removeEdge(sEdge);
 							}					
@@ -235,7 +236,7 @@ public class ContextMapper {
 					ContextHeadEdge labelEdgeHead = new ContextHeadEdge(label, new  RoleEdgeContent());
 					graph.addContextEdge(labelEdgeHead, modalNode, headNode);		
 					// create and edge between the negation_context node and the modal (so that the negation is over the modal)
-					ContextHeadEdge labelEdgeCan = new ContextHeadEdge(GraphLabels.NOT, new  RoleEdgeContent());
+					ContextHeadEdge labelEdgeCan = new ContextHeadEdge(GraphLabels.ANTIVER, new  RoleEdgeContent());
 					graph.addContextEdge(labelEdgeCan, negModalNode, modalNode);
 					// re-set the context of the head of the modal to the ctx of that head  
 					((SkolemNodeContent) head.getContent()).setContext(headNode.getLabel());
@@ -256,7 +257,7 @@ public class ContextMapper {
 							SemanticNode<?> negNode = graph.getFinishNode(s);
 							// re-set the context of the negation to its ctx
 							((SkolemNodeContent) negNode.getContent()).setContext(negModalNode.getLabel());
-						} else if (s.getLabel().equals("not")){
+						} else if (s.getLabel().equals("antiveridical")){
 							headNode = graph.getFinishNode(s);
 							// re-set the context of the head of the modal to the ctx of that head
 							((SkolemNodeContent) head.getContent()).setContext(headNode.getLabel());
@@ -267,6 +268,365 @@ public class ContextMapper {
 			}
 		}
 	}
+	
+	/**
+	 * It is called from the integrateNegativeContexts() and deals with the negation with not, none, never and neither. 
+	 * Not can be negating a predicate or a quantifier: 
+	 * a. The dog is not carrying the stick.
+	 * b. Not many people came.
+	 * In a. the head of the negation is a predicate and all arguments exist in top. In b. the head of the negation is
+	 * the head of the noun that the negation is modifying. All arguments exist in top.
+	 * None is always depending on a noun phras, e.g. none of the students, but again the predicate is begin negated.
+	 * Neither is negatibe both parts of the coordination; the predicate is being negated.
+	 * Never is negating the predicate.
+	 * @param node
+	 * @param negNode
+	 * @param previousNegNode
+	 */
+	private void integrateNotContexts(SemanticNode<?> node, SemanticNode<?> negNode, SemanticNode<?> previousNegNode){
+		// initialize the head of the negation
+		SemanticNode<?> head = null;
+		// initialize the context of the head of the negation
+		SemanticNode<?> ctxHead = null;
+		// get the dep head
+		SemanticNode<?> depHead = depGraph.getInNeighbors(node).iterator().next();
+		//If we have verbal coordination, then the combined node of the two predicates has to be negated
+		if (coordCtxs.containsKey(depHead) && coordCtxs.get(depHead).equals("verbal")){
+			// find the role head of this dep head
+			head = graph.getRoleGraph().getInNeighbors(depHead).iterator().next();
+			// if the negated node doesnt already exist (in cases of combined predicates), then add the self node of the negation
+			if (!graph.getContextGraph().containsNode(previousNegNode)){
+				// create the self node of the negation
+				negNode = addSelfContextNodeAndEdgeToGraph(node);
+			}
+			// set the previousNegNode to the current one.
+			previousNegNode = negNode;
+			/* if there is disjunction in the sentence (and not only conjunction), then we have to first find the context of the
+			 * current node-predicate and then find the context of this context.
+			 *  For that we need to get the ctxOfDepHead (= the context of the current node-predicate)
+			and ctxHead (= the context of the combined node)
+			 */
+			if (disjunction == true){
+				SemanticNode<?> ctxOfDepHead = graph.getContextGraph().getInNeighbors(depHead).iterator().next();
+				ctxHead = graph.getContextGraph().getInNeighbors(ctxOfDepHead).iterator().next();
+				/*
+				 * if there is also clausal coordination, then the edge linking the top node with the combined node of the predicates
+				 * should be removed and a new edge from the top to the negated context should be created.
+				 */
+				if (clausalCoord == true) {
+					SemanticEdge orEdge = graph.getContextGraph().getInEdges(ctxHead).iterator().next();
+					SemanticNode<?> top = graph.getStartNode(orEdge);
+					graph.removeContextEdge(orEdge);
+					ContextHeadEdge label = new ContextHeadEdge(GraphLabels.OR, new  RoleEdgeContent());
+					graph.addContextEdge(label, top, negNode);
+				}
+				// if there is no disjunction, then we just need to find the context of the current node-predicate. 
+			} else {
+				// find the context of the current node-predicate
+				ctxHead = graph.getContextGraph().getInNeighbors(depHead).iterator().next();
+			}
+			/*
+			 * if we dont have verbal coordination, but either clausal or noun/adject/etc, or if we have coord generally, 
+			 *  then the coordinated nodes have to be added to their parent. 
+			 */
+		} else if ((coordCtxs.containsKey(depHead) && !coordCtxs.get(depHead).equals("verbal")) || coord == true) {
+			/*
+			 * If there is dijunction and also clausal coordination, then the edge linking the top node with the current node
+			 * should be removed and a new edge from the top to the negated context should be created.
+			 */
+			if (disjunction == true && coordCtxs.containsKey(depHead) && coordCtxs.get(depHead).equals("clausal")){
+				// create the self node of the negation
+				negNode = addSelfContextNodeAndEdgeToGraph(node);
+				ctxHead = graph.getContextGraph().getInNeighbors(depHead).iterator().next();
+				SemanticEdge orEdge = graph.getContextGraph().getInEdges(ctxHead).iterator().next();
+				SemanticNode<?> top = graph.getStartNode(orEdge);
+				graph.removeContextEdge(orEdge);
+				ContextHeadEdge label = new ContextHeadEdge(GraphLabels.OR, new  RoleEdgeContent());
+				graph.addContextEdge(label, top, negNode);
+				// if no disjunction, then just create the self neg node and get the parent of the current node	
+			} else {
+				// create the self node of the negation
+				negNode = addSelfContextNodeAndEdgeToGraph(node);
+				if (!verbalForms.contains(((SkolemNodeContent) depHead.getContent()).getPosTag())){
+					SemanticNode<?> headOfHead = depGraph.getInNeighbors(depHead).iterator().next();
+					head = headOfHead;
+				} else {
+					head = depGraph.getInNeighbors(node).iterator().next();
+				}
+				// create the self node of the head of the negation
+				ctxHead = addSelfContextNodeAndEdgeToGraph(head);
+			}
+			//If there is no coordination but simple negation.
+		} else {
+			// create the self node of the negation
+			negNode = addSelfContextNodeAndEdgeToGraph(node);
+			if (!verbalForms.contains(((SkolemNodeContent) depHead.getContent()).getPosTag())){
+				SemanticNode<?> headOfHead = depGraph.getInNeighbors(depHead).iterator().next();
+				head = headOfHead;
+			} else {				
+				head = depGraph.getInNeighbors(node).iterator().next();
+			}
+			// create the self node of the head of the negation
+			ctxHead = addSelfContextNodeAndEdgeToGraph(head);
+		}
+
+		// create and add the edge between the negation and its head 
+		ContextHeadEdge labelEdge = new ContextHeadEdge(GraphLabels.ANTIVER, new  RoleEdgeContent());
+		graph.addContextEdge(labelEdge, negNode, ctxHead);	
+		// put the negated node created and its head to the hash
+		negCtxs.put(negNode, head);
+		// re-set the context of the head of the negation to the ctx of that head
+		if (head instanceof SkolemNode)
+			((SkolemNodeContent) head.getContent()).setContext(ctxHead.getLabel());
+		//graph.displayContexts();
+	}
+	
+	/**
+	 * It is called from integrateNegativeContexts() and deals with the sentences:
+	 * No dog is carrying a stick.
+	 * The dog is carrying no stick.
+	 * --> the dog and the stick exist only in the ctx of the carry and the head of the negation is a NP
+	 * @param node
+	 * @param negNode
+	 * @param previousNegNode
+	 */
+	private void integrateNoContexts(SemanticNode<?> node, SemanticNode<?> negNode, SemanticNode<?> previousNegNode){
+		// get the head of the negation
+		SemanticNode<?> head = depGraph.getInNeighbors(node).iterator().next();;
+		SemanticNode<?> ctxHead = null;
+		// get the head of the head in order to hopefully reach the main verb
+		SemanticNode<?> headOfHead = depGraph.getInNeighbors(head).iterator().next();
+		//If we have verbal coordination, then the combined node of the two predicates has to be negated
+		if (coordCtxs.containsKey(headOfHead) && coordCtxs.get(headOfHead).equals("verbal")){
+			if (!graph.getContextGraph().containsNode(previousNegNode)){
+				// create the self node of the negation
+				negNode = addSelfContextNodeAndEdgeToGraph(node);
+			}
+			previousNegNode = negNode;
+			/* if there is disjunction in the sentence (and not only conjunction), then we have to first find the context of the
+			 * current headOfHead and then find the context of this context.
+			 *  For that we need to get the ctxOfDepHead (= the context of the current node-predicate)
+			and ctxHead (= the context of the combined node)
+			 */
+			if (disjunction == true){
+				SemanticNode<?> ctxOfDepHead = graph.getContextGraph().getInNeighbors(headOfHead).iterator().next();
+				ctxHead = graph.getContextGraph().getInNeighbors(ctxOfDepHead).iterator().next();
+				/*
+				 * if there is also clausal coordination, then the edge linking the top node with the combined node of the predicates
+				 * should be removed and a new edge from the top to the negated context should be created.
+				 */
+				if (clausalCoord == true) {
+					SemanticEdge orEdge = graph.getContextGraph().getInEdges(ctxHead).iterator().next();
+					SemanticNode<?> top = graph.getStartNode(orEdge);
+					graph.removeContextEdge(orEdge);
+					ContextHeadEdge label = new ContextHeadEdge(GraphLabels.OR, new  RoleEdgeContent());
+					graph.addContextEdge(label, top, negNode);
+				}
+				// if there is no disjunction
+			} else {
+				// find the context head of the head of the head
+				ctxHead = graph.getContextGraph().getInNeighbors(headOfHead).iterator().next();
+			}
+			// set the context of the children of this context to this context
+			for (SemanticNode<?> child : graph.getOutNeighbors(ctxHead)){
+				if (child instanceof SkolemNode)
+					((SkolemNodeContent) child.getContent()).setContext(ctxHead.getLabel());
+			}
+			/*
+			 * if we dont have verbal coordination, but either clausal or noun/adject/etc, or if we have coord generally, 
+			 *  then the coordinated nodes have to be linked to their parent. 
+			 */
+		} else if ((coordCtxs.containsKey(headOfHead) && !coordCtxs.get(headOfHead).equals("verbal")) || coord == true) {
+			/*
+			 * If there is dijunction and also clausal coordination, then the edge linking the top node with the current node
+			 * should be removed and a new edge from the top to the negated context should be created.
+			 */
+			if (disjunction == true && coordCtxs.containsKey(headOfHead) && coordCtxs.get(headOfHead).equals("clausal")){
+				// create the self node of the negation
+				negNode = addSelfContextNodeAndEdgeToGraph(node);
+				ctxHead = graph.getContextGraph().getInNeighbors(headOfHead).iterator().next();
+				SemanticEdge orEdge = graph.getContextGraph().getInEdges(ctxHead).iterator().next();
+				SemanticNode<?> top = graph.getStartNode(orEdge);
+				graph.removeContextEdge(orEdge);
+				ContextHeadEdge label = new ContextHeadEdge(GraphLabels.OR, new  RoleEdgeContent());
+				graph.addContextEdge(label, top, negNode);		
+				// if no disjunction, then just create the self neg node and get the parent of the current node	
+			} else {
+				// create the self node of the negation
+				negNode = addSelfContextNodeAndEdgeToGraph(node);
+				head = depGraph.getInNeighbors(node).iterator().next();
+				// create the self node of the head of the negation
+				ctxHead = addSelfContextNodeAndEdgeToGraph(headOfHead);
+			}
+			//If there is no coordination but simple negation.
+		} else {
+			// create the self node of the negation
+			negNode = addSelfContextNodeAndEdgeToGraph(node);
+			head = depGraph.getInNeighbors(node).iterator().next();
+			// create the self node of the head of the negation
+			ctxHead = addSelfContextNodeAndEdgeToGraph(headOfHead);
+		}
+
+		// create and add the edge between the negation and the head of its head 
+		ContextHeadEdge labelEdge = new ContextHeadEdge(GraphLabels.ANTIVER, new  RoleEdgeContent());
+		graph.addContextEdge(labelEdge, negNode, ctxHead);
+		// the negated argument must be instantiated within the context of its head; it doesnt belong to top anymore		
+		ContextHeadEdge instEdge = new ContextHeadEdge(GraphLabels.VER, new  RoleEdgeContent());
+		graph.addContextEdge(instEdge, ctxHead, head);		
+		// the existing ctx of the negated argument is set to the next context
+		if (head instanceof SkolemNode)
+			((SkolemNodeContent) head.getContent()).setContext(ctxHead.getLabel());	
+		// put the negated node created and its head to the hash
+		negCtxs.put(negNode, headOfHead);
+		// re-set the context of the head of the head of the negation to the ctx of that head
+		if (headOfHead instanceof SkolemNode)
+			((SkolemNodeContent) headOfHead.getContent()).setContext(ctxHead.getLabel());
+
+		/*
+		 * if there is coordination (noun, adj, adv), then the children of this coordination should be added as 
+		 * instantiable nodes to their mother context since they dont exist in top anymore. Their conext should also
+		 * be adjusted.
+		 */
+		if (coord == true) {
+			SemanticNode<?> combHead = graph.getRoleGraph().getInNeighbors(head).iterator().next();
+			for (SemanticNode<?> child : graph.getRoleGraph().getOutNeighbors(combHead)){
+				if (child instanceof SkolemNode && !child.equals(head)) {
+					((SkolemNodeContent) child.getContent()).setContext(ctxHead.getLabel());
+					// the negated argument must be instantiated within the context of its head; it doesnt belong to top anymore		
+					ContextHeadEdge instEdge2 = new ContextHeadEdge(GraphLabels.VER, new  RoleEdgeContent());
+					graph.addContextEdge(instEdge2, ctxHead, child);
+				}
+			}
+		}	
+	}
+	
+	/**
+	 * It is called from integrateNegativeContexts() and deals with the sentences:
+	 * Nobody is carrying a stick.
+	 * The dog is carrying nothing.
+	 * --> the dog and the stick exist only in the ctx of the carry and the head of the negation is a predicate
+	 * @param node
+	 * @param negNode
+	 * @param previousNegNode
+	 */
+	private void integrateNobodyContexts(SemanticNode<?> node, SemanticNode<?> negNode, SemanticNode<?> previousNegNode){
+		SemanticNode<?> head = null;
+		SemanticNode<?> ctxHead = null;
+		// get the head of the negation
+		SemanticNode<?> depHead = depGraph.getInNeighbors(node).iterator().next();			
+		//If we have verbal coordination, then the combined node of the two predicates has to be negated
+		if (coordCtxs.containsKey(depHead) && coordCtxs.get(depHead).equals("verbal")){
+			// find the role head of this dep head
+			head = graph.getRoleGraph().getInNeighbors(depHead).iterator().next();
+			if (!graph.getContextGraph().containsNode(previousNegNode)){
+				// create the self node of the negation
+				negNode = addSelfContextNodeAndEdgeToGraph(node);
+			}
+			previousNegNode = negNode;
+			/* if there is disjunction in the sentence (and not only conjunction), then we have to first find the context of the
+			 * current node-predicate and then find the context of this context.
+			 *  For that we need to get the ctxOfDepHead (= the context of the current node-predicate)
+			and ctxHead (= the context of the combined node)
+			 */
+			if (disjunction == true){
+				SemanticNode<?> ctxOfDepHead = graph.getContextGraph().getInNeighbors(depHead).iterator().next();
+				ctxHead = graph.getContextGraph().getInNeighbors(ctxOfDepHead).iterator().next();
+				/*
+				 * if there is also clausal coordination, then the edge linking the top node with the combined node of the predicates
+				 * should be removed and a new edge from the top to the negated context should be created.
+				 */
+				if (clausalCoord == true) {
+					SemanticEdge orEdge = graph.getContextGraph().getInEdges(ctxHead).iterator().next();
+					SemanticNode<?> top = graph.getStartNode(orEdge);
+					graph.removeContextEdge(orEdge);
+					ContextHeadEdge label = new ContextHeadEdge(GraphLabels.OR, new  RoleEdgeContent());
+					graph.addContextEdge(label, top, negNode);
+				}
+			// if no disjunction, then just create the self neg node and get the parent of the current node	
+			} else {
+				// find the context head of this role head
+				ctxHead = graph.getContextGraph().getInNeighbors(depHead).iterator().next();
+			}
+			/*
+			 * if we dont have verbal coordination, but either clausal or noun/adject/etc, or if we have coord generally, 
+			 *  then the coordinated nodes have to be linked to their parent. 
+			 */
+		} else if ((coordCtxs.containsKey(depHead) && !coordCtxs.get(depHead).equals("verbal")) || coord == true) {
+			/*
+			 * If there is dijunction and also clausal coordination, then the edge linking the top node with the current node
+			 * should be removed and a new edge from the top to the negated context should be created.
+			 */
+			if (disjunction == true && coordCtxs.containsKey(depHead) && coordCtxs.get(depHead).equals("clausal")){
+				// create the self node of the negation
+				negNode = addSelfContextNodeAndEdgeToGraph(node);
+				ctxHead = graph.getContextGraph().getInNeighbors(depHead).iterator().next();
+				SemanticEdge orEdge = graph.getContextGraph().getInEdges(ctxHead).iterator().next();
+				SemanticNode<?> top = graph.getStartNode(orEdge);
+				graph.removeContextEdge(orEdge);
+				ContextHeadEdge label = new ContextHeadEdge(GraphLabels.OR, new  RoleEdgeContent());
+				graph.addContextEdge(label, top, negNode);	
+			// if no disjunction, then just create the self neg node and get the parent of the current node	
+			} else {
+				// create the self node of the negation
+				negNode = addSelfContextNodeAndEdgeToGraph(node);
+				head = depGraph.getInNeighbors(node).iterator().next();
+				// create the self node of the head of the negation
+				ctxHead = addSelfContextNodeAndEdgeToGraph(head);
+			}			
+		} //If there is no coordination but simple negation.
+		else {
+		// create the self node of the negation
+		negNode = addSelfContextNodeAndEdgeToGraph(node);
+		head = depGraph.getInNeighbors(node).iterator().next();
+		// create the self node of the head of the negation
+		ctxHead = addSelfContextNodeAndEdgeToGraph(head);
+	}
+
+		// create and add the edge between the negation and the head of its head 
+		ContextHeadEdge labelEdge = new ContextHeadEdge(GraphLabels.ANTIVER, new  RoleEdgeContent());
+		graph.addContextEdge(labelEdge, negNode, ctxHead);
+		//depending on the word, we need a new node to carry the meaning
+		SemanticNode<?> finish = null;
+		if (((SkolemNodeContent) node.getContent()).getStem().equals("nobody") ){
+			// create new skolem node with new content; we need a skolem node and not jsut a context node
+			// because we want to save the context info of this node in itself
+			SkolemNodeContent content = new SkolemNodeContent();
+			content.setSurface("person");
+			content.setStem("person");
+			content.setPosTag("NN");
+			content.setPartOfSpeech("NN");
+			// the position is set to be the negative position of the word it is replacing, e.g. nobody
+			content.setPosition(((SkolemNodeContent) node.getContent()).getPosition()*-1);
+			content.setDerived(false);		
+			content.setSkolem("person"+"_"+content.getPosition());
+			finish = new SkolemNode(content.getSkolem(), content);
+		} else if (((SkolemNodeContent) node.getContent()).getStem().equals("nothing") ) {
+			// create new skolem node with new content; we need a skolem node and not jsut a context node
+			// because we want to save the context info of this node in itself
+			SkolemNodeContent content = new SkolemNodeContent();
+			content.setSurface("thing");
+			content.setStem("thing");
+			content.setPosTag("NN");
+			content.setPartOfSpeech("NN");
+			// the position is set to be the negative position of the word it is replacing, e.g. nobody
+			content.setPosition(((SkolemNodeContent) node.getContent()).getPosition()*-1);
+			content.setDerived(false);		
+			content.setSkolem("thing"+"_"+content.getPosition());
+			finish = new SkolemNode(content.getSkolem(), content);
+		}
+
+		// the negated argument must be instantiated within the context of its head; it doesnt belong to top anymore	
+		ContextHeadEdge instEdge = new ContextHeadEdge(GraphLabels.VER, new  RoleEdgeContent());
+		graph.addContextEdge(instEdge, ctxHead, finish);
+		// the existing ctx of the negated argument is set to the next context
+		((SkolemNodeContent) finish.getContent()).setContext(ctxHead.getLabel());
+		// put the negated node created and its head to the hash
+		negCtxs.put(negNode, head);
+		// re-set the context of the head of the negation to the ctx of that head
+		if (head instanceof SkolemNode)
+			((SkolemNodeContent) head.getContent()).setContext(ctxHead.getLabel());
+	}	
+
 
 	/**
 	 * Integrates all negative contexts of the sentence. 
@@ -276,98 +636,21 @@ public class ContextMapper {
 		Set<SemanticNode<?>> nodes = depGraph.getNodes();
 		SemanticNode<?> previousNegNode = null;
 		for (SemanticNode<?> node : nodes){
-			/* First if clause deals with the following negation:
-			 * The dog is not carrying the stick.
-			 * --> the head of the negation is a predicate and all arguments exist in top
+			/* First if clause deals with the negation with not, none, never and neither. Not can be negating a predicate or a quantifier: 
+			 * a. The dog is not carrying the stick.
+			 * b. Not many people came.
+			 * In a. the head of the negation is a predicate and all arguments exist in top. In b. the head of the negation is
+			 * the head of the noun that the negation is modifying. All arguments exist in top.
+			 * None is always depending on a noun phras, e.g. none of the students, but again the predicate is begin negated.
+			 * Neither is negatibe both parts of the coordination; the predicate is being negated.
+			 * Never is negating the predicate.
 			 */
 			if (((SkolemNodeContent) node.getContent()).getStem().equals("not") 
 					|| ((SkolemNodeContent) node.getContent()).getStem().equals("n't")
-					|| ((SkolemNodeContent) node.getContent()).getStem().equals("never")){			
-				// initialize the head of the negation
-				SemanticNode<?> head = null;
-				// initialize the context of the head of the negation
-				SemanticNode<?> ctxHead = null;
-				// get the dep head
-				SemanticNode<?> depHead = depGraph.getInNeighbors(node).iterator().next();
-				//If we have verbal coordination, then the combined node of the two predicates has to be negated
-				if (coordCtxs.containsKey(depHead) && coordCtxs.get(depHead).equals("verbal")){
-					// find the role head of this dep head
-					head = graph.getRoleGraph().getInNeighbors(depHead).iterator().next();
-					// if the negated node doesnt already exist (in cases of combined predicates), then add the self node of the negation
-					if (!graph.getContextGraph().containsNode(previousNegNode)){
-						// create the self node of the negation
-						negNode = addSelfContextNodeAndEdgeToGraph(node);
-					}
-					// set the previousNegNode to the current one.
-					previousNegNode = negNode;
-					/* if there is disjunction in the sentence (and not only conjunction), then we have to first find the context of the
-					 * current node-predicate and then find the context of this context.
-					 *  For that we need to get the ctxOfDepHead (= the context of the current node-predicate)
-					and ctxHead (= the context of the combined node)
-					 */
-					if (disjunction == true){
-						SemanticNode<?> ctxOfDepHead = graph.getContextGraph().getInNeighbors(depHead).iterator().next();
-						ctxHead = graph.getContextGraph().getInNeighbors(ctxOfDepHead).iterator().next();
-						/*
-						 * if there is also clausal coordination, then the edge linking the top node with the combined node of the predicates
-						 * should be removed and a new edge from the top to the negated context should be created.
-						 */
-						if (clausalCoord == true) {
-							SemanticEdge orEdge = graph.getContextGraph().getInEdges(ctxHead).iterator().next();
-							SemanticNode<?> top = graph.getStartNode(orEdge);
-							graph.removeContextEdge(orEdge);
-							ContextHeadEdge label = new ContextHeadEdge(GraphLabels.OR, new  RoleEdgeContent());
-							graph.addContextEdge(label, top, negNode);
-						}
-						// if there is no disjunction, then we just need to find the context of the current node-predicate. 
-					} else {
-						// find the context of the current node-predicate
-						ctxHead = graph.getContextGraph().getInNeighbors(depHead).iterator().next();
-					}
-					/*
-					 * if we dont have verbal coordination, but either clausal or noun/adject/etc, or if we have coord generally, 
-					 *  then the coordinated nodes have to be added to their parent. 
-					 */
-				} else if ((coordCtxs.containsKey(depHead) && !coordCtxs.get(depHead).equals("verbal")) || coord == true) {
-					/*
-					 * If there is dijunction and also clausal coordination, then the edge linking the top node with the current node
-					 * should be removed and a new edge from the top to the negated context should be created.
-					 */
-					if (disjunction == true && coordCtxs.containsKey(depHead) && coordCtxs.get(depHead).equals("clausal")){
-						// create the self node of the negation
-						negNode = addSelfContextNodeAndEdgeToGraph(node);
-						ctxHead = graph.getContextGraph().getInNeighbors(depHead).iterator().next();
-						SemanticEdge orEdge = graph.getContextGraph().getInEdges(ctxHead).iterator().next();
-						SemanticNode<?> top = graph.getStartNode(orEdge);
-						graph.removeContextEdge(orEdge);
-						ContextHeadEdge label = new ContextHeadEdge(GraphLabels.OR, new  RoleEdgeContent());
-						graph.addContextEdge(label, top, negNode);
-						// if no disjunction, then just create the self neg node and get the parent of the current node	
-					} else {
-						// create the self node of the negation
-						negNode = addSelfContextNodeAndEdgeToGraph(node);
-						head = depGraph.getInNeighbors(node).iterator().next();
-						// create the self node of the head of the negation
-						ctxHead = addSelfContextNodeAndEdgeToGraph(head);
-					}
-					//If there is no coordination but simple negation.
-				} else {
-					// create the self node of the negation
-					negNode = addSelfContextNodeAndEdgeToGraph(node);
-					head = depGraph.getInNeighbors(node).iterator().next();
-					// create the self node of the head of the negation
-					ctxHead = addSelfContextNodeAndEdgeToGraph(head);
-				}
-
-				// create and add the edge between the negation and its head 
-				ContextHeadEdge labelEdge = new ContextHeadEdge(GraphLabels.ANTIVER, new  RoleEdgeContent());
-				graph.addContextEdge(labelEdge, negNode, ctxHead);	
-				// put the negated node created and its head to the hash
-				negCtxs.put(negNode, head);
-				// re-set the context of the head of the negation to the ctx of that head
-				if (head instanceof SkolemNode)
-					((SkolemNodeContent) head.getContent()).setContext(ctxHead.getLabel());
-				//graph.displayContexts();
+					|| ((SkolemNodeContent) node.getContent()).getStem().equals("none")
+					|| ((SkolemNodeContent) node.getContent()).getStem().equals("never")
+					|| ((SkolemNodeContent) node.getContent()).getStem().equals("neither")){	
+				integrateNotContexts( node, negNode, previousNegNode);
 			}
 			/*
 			 * second else if deals with the sentences:
@@ -376,113 +659,7 @@ public class ContextMapper {
 			 * --> the dog and the stick exist only in the ctx of the carry and the head of the negation is a NP
 			 */
 			else if (((SkolemNodeContent) node.getContent()).getStem().equals("no")){
-				// get the head of the negation
-				SemanticNode<?> head = depGraph.getInNeighbors(node).iterator().next();;
-				SemanticNode<?> ctxHead = null;
-				// get the head of the head in order to hopefully reach the main verb
-				SemanticNode<?> headOfHead = depGraph.getInNeighbors(head).iterator().next();
-				//If we have verbal coordination, then the combined node of the two predicates has to be negated
-				if (coordCtxs.containsKey(headOfHead) && coordCtxs.get(headOfHead).equals("verbal")){
-					if (!graph.getContextGraph().containsNode(previousNegNode)){
-						// create the self node of the negation
-						negNode = addSelfContextNodeAndEdgeToGraph(node);
-					}
-					previousNegNode = negNode;
-					/* if there is disjunction in the sentence (and not only conjunction), then we have to first find the context of the
-					 * current headOfHead and then find the context of this context.
-					 *  For that we need to get the ctxOfDepHead (= the context of the current node-predicate)
-					and ctxHead (= the context of the combined node)
-					 */
-					if (disjunction == true){
-						SemanticNode<?> ctxOfDepHead = graph.getContextGraph().getInNeighbors(headOfHead).iterator().next();
-						ctxHead = graph.getContextGraph().getInNeighbors(ctxOfDepHead).iterator().next();
-						/*
-						 * if there is also clausal coordination, then the edge linking the top node with the combined node of the predicates
-						 * should be removed and a new edge from the top to the negated context should be created.
-						 */
-						if (clausalCoord == true) {
-							SemanticEdge orEdge = graph.getContextGraph().getInEdges(ctxHead).iterator().next();
-							SemanticNode<?> top = graph.getStartNode(orEdge);
-							graph.removeContextEdge(orEdge);
-							ContextHeadEdge label = new ContextHeadEdge(GraphLabels.OR, new  RoleEdgeContent());
-							graph.addContextEdge(label, top, negNode);
-						}
-						// if there is no disjunction
-					} else {
-						// find the context head of the head of the head
-						ctxHead = graph.getContextGraph().getInNeighbors(headOfHead).iterator().next();
-					}
-					// set the context of the children of this context to this context
-					for (SemanticNode<?> child : graph.getOutNeighbors(ctxHead)){
-						if (child instanceof SkolemNode)
-							((SkolemNodeContent) child.getContent()).setContext(ctxHead.getLabel());
-					}
-					/*
-					 * if we dont have verbal coordination, but either clausal or noun/adject/etc, or if we have coord generally, 
-					 *  then the coordinated nodes have to be linked to their parent. 
-					 */
-				} else if ((coordCtxs.containsKey(headOfHead) && !coordCtxs.get(headOfHead).equals("verbal")) || coord == true) {
-					/*
-					 * If there is dijunction and also clausal coordination, then the edge linking the top node with the current node
-					 * should be removed and a new edge from the top to the negated context should be created.
-					 */
-					if (disjunction == true && coordCtxs.containsKey(headOfHead) && coordCtxs.get(headOfHead).equals("clausal")){
-						// create the self node of the negation
-						negNode = addSelfContextNodeAndEdgeToGraph(node);
-						ctxHead = graph.getContextGraph().getInNeighbors(headOfHead).iterator().next();
-						SemanticEdge orEdge = graph.getContextGraph().getInEdges(ctxHead).iterator().next();
-						SemanticNode<?> top = graph.getStartNode(orEdge);
-						graph.removeContextEdge(orEdge);
-						ContextHeadEdge label = new ContextHeadEdge(GraphLabels.OR, new  RoleEdgeContent());
-						graph.addContextEdge(label, top, negNode);		
-						// if no disjunction, then just create the self neg node and get the parent of the current node	
-					} else {
-						// create the self node of the negation
-						negNode = addSelfContextNodeAndEdgeToGraph(node);
-						head = depGraph.getInNeighbors(node).iterator().next();
-						// create the self node of the head of the negation
-						ctxHead = addSelfContextNodeAndEdgeToGraph(headOfHead);
-					}
-					//If there is no coordination but simple negation.
-				} else {
-					// create the self node of the negation
-					negNode = addSelfContextNodeAndEdgeToGraph(node);
-					head = depGraph.getInNeighbors(node).iterator().next();
-					// create the self node of the head of the negation
-					ctxHead = addSelfContextNodeAndEdgeToGraph(headOfHead);
-				}
-
-				// create and add the edge between the negation and the head of its head 
-				ContextHeadEdge labelEdge = new ContextHeadEdge(GraphLabels.ANTIVER, new  RoleEdgeContent());
-				graph.addContextEdge(labelEdge, negNode, ctxHead);
-				// the negated argument must be instantiated within the context of its head; it doesnt belong to top anymore		
-				ContextHeadEdge instEdge = new ContextHeadEdge(GraphLabels.VER, new  RoleEdgeContent());
-				graph.addContextEdge(instEdge, ctxHead, head);		
-				// the existing ctx of the negated argument is set to the next context
-				if (head instanceof SkolemNode)
-					((SkolemNodeContent) head.getContent()).setContext(ctxHead.getLabel());	
-				// put the negated node created and its head to the hash
-				negCtxs.put(negNode, headOfHead);
-				// re-set the context of the head of the head of the negation to the ctx of that head
-				if (headOfHead instanceof SkolemNode)
-					((SkolemNodeContent) headOfHead.getContent()).setContext(ctxHead.getLabel());
-
-				/*
-				 * if there is coordination (noun, adj, adv), then the children of this coordination should be added as 
-				 * instantiable nodes to their mother context since they dont exist in top anymore. Their conext should also
-				 * be adjusted.
-				 */
-				if (coord == true) {
-					SemanticNode<?> combHead = graph.getRoleGraph().getInNeighbors(head).iterator().next();
-					for (SemanticNode<?> child : graph.getRoleGraph().getOutNeighbors(combHead)){
-						if (child instanceof SkolemNode && !child.equals(head)) {
-							((SkolemNodeContent) child.getContent()).setContext(ctxHead.getLabel());
-							// the negated argument must be instantiated within the context of its head; it doesnt belong to top anymore		
-							ContextHeadEdge instEdge2 = new ContextHeadEdge(GraphLabels.VER, new  RoleEdgeContent());
-							graph.addContextEdge(instEdge2, ctxHead, child);
-						}
-					}
-				}			
+				integrateNoContexts (node, negNode, previousNegNode);		
 			} 
 			/*
 			 * third else if deals with the sentences:
@@ -493,121 +670,7 @@ public class ContextMapper {
 			else if (((SkolemNodeContent) node.getContent()).getStem().equals("nobody") 
 					|| ((SkolemNodeContent) node.getContent()).getStem().equals("nothing") 
 					|| ((SkolemNodeContent) node.getContent()).getStem().equals("noone") ){
-				SemanticNode<?> head = null;
-				SemanticNode<?> ctxHead = null;
-				// get the head of the negation
-				SemanticNode<?> depHead = depGraph.getInNeighbors(node).iterator().next();			
-				//If we have verbal coordination, then the combined node of the two predicates has to be negated
-				if (coordCtxs.containsKey(depHead) && coordCtxs.get(depHead).equals("verbal")){
-					// find the role head of this dep head
-					head = graph.getRoleGraph().getInNeighbors(depHead).iterator().next();
-					if (!graph.getContextGraph().containsNode(previousNegNode)){
-						// create the self node of the negation
-						negNode = addSelfContextNodeAndEdgeToGraph(node);
-					}
-					previousNegNode = negNode;
-					/* if there is disjunction in the sentence (and not only conjunction), then we have to first find the context of the
-					 * current node-predicate and then find the context of this context.
-					 *  For that we need to get the ctxOfDepHead (= the context of the current node-predicate)
-					and ctxHead (= the context of the combined node)
-					 */
-					if (disjunction == true){
-						SemanticNode<?> ctxOfDepHead = graph.getContextGraph().getInNeighbors(depHead).iterator().next();
-						ctxHead = graph.getContextGraph().getInNeighbors(ctxOfDepHead).iterator().next();
-						/*
-						 * if there is also clausal coordination, then the edge linking the top node with the combined node of the predicates
-						 * should be removed and a new edge from the top to the negated context should be created.
-						 */
-						if (clausalCoord == true) {
-							SemanticEdge orEdge = graph.getContextGraph().getInEdges(ctxHead).iterator().next();
-							SemanticNode<?> top = graph.getStartNode(orEdge);
-							graph.removeContextEdge(orEdge);
-							ContextHeadEdge label = new ContextHeadEdge(GraphLabels.OR, new  RoleEdgeContent());
-							graph.addContextEdge(label, top, negNode);
-						}
-					// if no disjunction, then just create the self neg node and get the parent of the current node	
-					} else {
-						// find the context head of this role head
-						ctxHead = graph.getContextGraph().getInNeighbors(depHead).iterator().next();
-					}
-					/*
-					 * if we dont have verbal coordination, but either clausal or noun/adject/etc, or if we have coord generally, 
-					 *  then the coordinated nodes have to be linked to their parent. 
-					 */
-				} else if ((coordCtxs.containsKey(depHead) && !coordCtxs.get(depHead).equals("verbal")) || coord == true) {
-					/*
-					 * If there is dijunction and also clausal coordination, then the edge linking the top node with the current node
-					 * should be removed and a new edge from the top to the negated context should be created.
-					 */
-					if (disjunction == true && coordCtxs.containsKey(depHead) && coordCtxs.get(depHead).equals("clausal")){
-						// create the self node of the negation
-						negNode = addSelfContextNodeAndEdgeToGraph(node);
-						ctxHead = graph.getContextGraph().getInNeighbors(depHead).iterator().next();
-						SemanticEdge orEdge = graph.getContextGraph().getInEdges(ctxHead).iterator().next();
-						SemanticNode<?> top = graph.getStartNode(orEdge);
-						graph.removeContextEdge(orEdge);
-						ContextHeadEdge label = new ContextHeadEdge(GraphLabels.OR, new  RoleEdgeContent());
-						graph.addContextEdge(label, top, negNode);	
-					// if no disjunction, then just create the self neg node and get the parent of the current node	
-					} else {
-						// create the self node of the negation
-						negNode = addSelfContextNodeAndEdgeToGraph(node);
-						head = depGraph.getInNeighbors(node).iterator().next();
-						// create the self node of the head of the negation
-						ctxHead = addSelfContextNodeAndEdgeToGraph(head);
-					}			
-				} //If there is no coordination but simple negation.
-				else {
-				// create the self node of the negation
-				negNode = addSelfContextNodeAndEdgeToGraph(node);
-				head = depGraph.getInNeighbors(node).iterator().next();
-				// create the self node of the head of the negation
-				ctxHead = addSelfContextNodeAndEdgeToGraph(head);
-			}
-
-				// create and add the edge between the negation and the head of its head 
-				ContextHeadEdge labelEdge = new ContextHeadEdge(GraphLabels.ANTIVER, new  RoleEdgeContent());
-				graph.addContextEdge(labelEdge, negNode, ctxHead);
-				//depending on the word, we need a new node to carry the meaning
-				SemanticNode<?> finish = null;
-				if (((SkolemNodeContent) node.getContent()).getStem().equals("nobody") ){
-					// create new skolem node with new content; we need a skolem node and not jsut a context node
-					// because we want to save the context info of this node in itself
-					SkolemNodeContent content = new SkolemNodeContent();
-					content.setSurface("person");
-					content.setStem("person");
-					content.setPosTag("NN");
-					content.setPartOfSpeech("NN");
-					// the position is set to be the negative position of the word it is replacing, e.g. nobody
-					content.setPosition(((SkolemNodeContent) node.getContent()).getPosition()*-1);
-					content.setDerived(false);		
-					content.setSkolem("person"+"_"+content.getPosition());
-					finish = new SkolemNode(content.getSkolem(), content);
-				} else if (((SkolemNodeContent) node.getContent()).getStem().equals("nothing") ) {
-					// create new skolem node with new content; we need a skolem node and not jsut a context node
-					// because we want to save the context info of this node in itself
-					SkolemNodeContent content = new SkolemNodeContent();
-					content.setSurface("thing");
-					content.setStem("thing");
-					content.setPosTag("NN");
-					content.setPartOfSpeech("NN");
-					// the position is set to be the negative position of the word it is replacing, e.g. nobody
-					content.setPosition(((SkolemNodeContent) node.getContent()).getPosition()*-1);
-					content.setDerived(false);		
-					content.setSkolem("thing"+"_"+content.getPosition());
-					finish = new SkolemNode(content.getSkolem(), content);
-				}
-
-				// the negated argument must be instantiated within the context of its head; it doesnt belong to top anymore	
-				ContextHeadEdge instEdge = new ContextHeadEdge(GraphLabels.VER, new  RoleEdgeContent());
-				graph.addContextEdge(instEdge, ctxHead, finish);
-				// the existing ctx of the negated argument is set to the next context
-				((SkolemNodeContent) finish.getContent()).setContext(ctxHead.getLabel());
-				// put the negated node created and its head to the hash
-				negCtxs.put(negNode, head);
-				// re-set the context of the head of the negation to the ctx of that head
-				if (head instanceof SkolemNode)
-					((SkolemNodeContent) head.getContent()).setContext(ctxHead.getLabel());
+				integrateNobodyContexts( node, negNode, previousNegNode);
 			}	
 		}
 	}
@@ -646,6 +709,126 @@ public class ContextMapper {
 			}
 		}
 	}
+	
+	/**
+	 * It is called from integrateCoordinatingContexts() and deals with disjunction: or, either/or
+	 * @param edge
+	 */
+	private void integrateDisjunction(SemanticEdge edge){
+		disjunction = true;
+		// find the edge of the coord and get the start and the end nodes of this edge ( = the two parts of the coord)
+		SemanticNode<?> start = depGraph.getStartNode(edge);
+		SemanticNode<?> finish = depGraph.getEndNode(edge);
+		// create the contexts of the two nodes and get them back
+		SemanticNode<?> ctxOfStart = this.addSelfContextNodeAndEdgeToGraph(start);
+		SemanticNode<?> ctxOfFinish = this.addSelfContextNodeAndEdgeToGraph(finish);
+		/* check if the parents of the start node are not empty. if they are not empty, then there is no predicate coordination.*/
+		if (!depGraph.getInNeighbors(start).isEmpty()){
+			//get the parent of the coord
+			SemanticNode<?> parentOfStart = depGraph.getInNeighbors(start).iterator().next();
+			// get the context of the parent
+			SemanticNode<?> ctxOfParent = this.addSelfContextNodeAndEdgeToGraph(parentOfStart);
+			// create contexts from the parent to the coordinated children
+			ContextHeadEdge labelStart = new ContextHeadEdge(GraphLabels.OR, new  RoleEdgeContent());
+			// create the edges between the parent of the coord and the two coordinating nodes
+			graph.addContextEdge(labelStart, ctxOfParent, ctxOfStart);
+			ContextHeadEdge labelFinish = new ContextHeadEdge(GraphLabels.OR, new  RoleEdgeContent());
+			graph.addContextEdge(labelFinish, ctxOfParent, ctxOfFinish);
+			coord = true;
+			//put the start and the finish into the hash of coordination (node:type of coordination). The hash will be needed when chcking for negative contexts.
+			if (!coordCtxs.containsKey(start))
+				coordCtxs.put(start, "other");
+			if (!coordCtxs.containsKey(finish))
+				coordCtxs.put(finish, "other");
+			// if the parent of the start node are empty (= parents), then there is predicate coordination
+		} else {
+			// if the start and the finish are depending on other nodes in teh role graph, then there is no clausal coord but simple verbal one 
+			if (!graph.getRoleGraph().getInNeighbors(start).isEmpty() && !graph.getRoleGraph().getInNeighbors(finish).isEmpty() ){
+				// if we have verbal coordination, create a comb node of the two from whcih the two predicates will depend
+				SemanticNode<?> combNode = graph.getRoleGraph().getInNeighbors(start).iterator().next();
+				ContextNode top = new ContextNode("ctx("+combNode.getLabel()+")", new ContextNodeContent());
+				graph.addNode(top);
+				ContextHeadEdge labelStart = new ContextHeadEdge(GraphLabels.OR, new  RoleEdgeContent());
+				graph.addContextEdge(labelStart, top, ctxOfStart);
+				((SkolemNodeContent) start.getContent()).setContext(ctxOfStart.getLabel());
+				ContextHeadEdge labelFinish = new ContextHeadEdge(GraphLabels.OR, new  RoleEdgeContent());
+				graph.addContextEdge(labelFinish, top, ctxOfFinish);
+				((SkolemNodeContent) finish.getContent()).setContext(ctxOfFinish.getLabel());
+				// again, put everything int he hash
+				verbCoord = true;
+				if (!coordCtxs.containsKey(start) || (coordCtxs.containsKey(start) && coordCtxs.get(start).equals("clausal")))
+					coordCtxs.put(start, "verbal");
+				if (!coordCtxs.containsKey(finish))
+					coordCtxs.put(finish, "verbal");
+			// if they are not depending on any other nodes of the role graph, it means we have clausal coordination
+			} else {
+				// in this case we create a node top from which the two separate sentences depend
+				ContextNode top = new ContextNode("top", new ContextNodeContent());
+				graph.addNode(top);
+				ContextHeadEdge labelStart = new ContextHeadEdge(GraphLabels.OR, new  RoleEdgeContent());
+				// if there is also verbCoord within one of the sentences, then the combined node of this predicate should be used as the start
+				if (verbCoord == true){
+					ctxOfStart = graph.getContextGraph().getInNeighbors(ctxOfStart).iterator().next();
+				}
+				graph.addContextEdge(labelStart, top, ctxOfStart);
+				((SkolemNodeContent) start.getContent()).setContext(ctxOfStart.getLabel());
+				ContextHeadEdge labelFinish = new ContextHeadEdge(GraphLabels.OR, new  RoleEdgeContent());
+				graph.addContextEdge(labelFinish, top, ctxOfFinish);
+				((SkolemNodeContent) finish.getContent()).setContext(ctxOfFinish.getLabel());
+				clausalCoord = true;
+				// again, put everything int he hash
+				if (!coordCtxs.containsKey(start))
+					coordCtxs.put(start, "clausal");
+				if (!coordCtxs.containsKey(finish))
+					coordCtxs.put(finish, "clausal");
+			}
+		}
+	}
+	
+	/**
+	 * It is called from integrateCoordinatingContexts() and deals with conjunction: and, neither/nor
+	 * @param edge
+	 */
+	private void integrateConjunction(SemanticEdge edge){
+		// find the edge of the coord and get the start and the end nodes of this edge ( = the two parts of the coord)
+		SemanticNode<?> start = depGraph.getStartNode(edge);
+		SemanticNode<?> finish = depGraph.getEndNode(edge);
+		// if the start and the finish are depending on other nodes in teh role graph, then there is no clausal coord but simple verbal one 
+		if (!graph.getRoleGraph().getInNeighbors(start).isEmpty() && !graph.getRoleGraph().getInNeighbors(finish).isEmpty() ){
+			/* check if the start node has a parent. If empty, there is predicate coordination.
+			 * and we need to separate the two predicates*/
+			if  (depGraph.getInNeighbors(start).isEmpty()) {
+				SemanticNode<?> combNode = graph.getRoleGraph().getInNeighbors(start).iterator().next(); 
+				ContextHeadEdge combEdge1 = new ContextHeadEdge(GraphLabels.CONTEXT_HEAD, new  RoleEdgeContent());
+				ContextHeadEdge combEdge2 = new ContextHeadEdge(GraphLabels.CONTEXT_HEAD, new  RoleEdgeContent());
+				SemanticNode<?> ctxOfCombNode = new ContextNode("ctx("+combNode.getLabel()+")", new ContextNodeContent());
+				graph.addContextEdge(combEdge1, ctxOfCombNode, start);
+				graph.addContextEdge(combEdge2, ctxOfCombNode, finish);
+				verbCoord = true;
+				// again, put everything int he hash. If the "start" verb is already in the hash and has the value "clausal"
+				// then add it again with the type "verbal". The type "verbal" is then the main one for this verb.  
+				if (!coordCtxs.containsKey(start) || (coordCtxs.containsKey(start) && coordCtxs.get(start).equals("clausal")))
+					coordCtxs.put(start, "verbal");
+				if (!coordCtxs.containsKey(finish))
+					coordCtxs.put(finish, "verbal");
+			// if we dont have predicate coordination, we have simple one
+			} else {
+				coord = true;
+				if (!coordCtxs.containsKey(start))
+					coordCtxs.put(start, "other");
+				if (!coordCtxs.containsKey(finish))
+					coordCtxs.put(finish, "other");
+			}
+		// if they are not depending on any other nodes of the role graph, it means we have clausal coordination	
+		} else {
+			clausalCoord = true;
+			// again, put everything in the hash
+			if (!coordCtxs.containsKey(start))
+				coordCtxs.put(start, "clausal");
+			if (!coordCtxs.containsKey(finish))
+				coordCtxs.put(finish, "clausal");
+		}
+	}
 
 	/***
 	 * Integrates all coordinating contexts. 
@@ -656,114 +839,10 @@ public class ContextMapper {
 		for (SemanticEdge edge : edges){
 			// if there is disjunction
 			if (edge.getLabel().equals("conj:or")){
-				disjunction = true;
-				// find the edge of the coord and get the start and the end nodes of this edge ( = the two parts of the coord)
-				SemanticNode<?> start = depGraph.getStartNode(edge);
-				SemanticNode<?> finish = depGraph.getEndNode(edge);
-				// create the contexts of the two nodes and get them back
-				SemanticNode<?> ctxOfStart = this.addSelfContextNodeAndEdgeToGraph(start);
-				SemanticNode<?> ctxOfFinish = this.addSelfContextNodeAndEdgeToGraph(finish);
-				/* check if the parents of the start node are not empty. if they are not empty, then there is no predicate coordination.*/
-				if (!depGraph.getInNeighbors(start).isEmpty()){
-					//get the parent of the coord
-					SemanticNode<?> parentOfStart = depGraph.getInNeighbors(start).iterator().next();
-					// get the context of the parent
-					SemanticNode<?> ctxOfParent = this.addSelfContextNodeAndEdgeToGraph(parentOfStart);
-					// create contexts from the parent to the coordinated children
-					ContextHeadEdge labelStart = new ContextHeadEdge(GraphLabels.OR, new  RoleEdgeContent());
-					// create the edges between the parent of the coord and the two coordinating nodes
-					graph.addContextEdge(labelStart, ctxOfParent, ctxOfStart);
-					ContextHeadEdge labelFinish = new ContextHeadEdge(GraphLabels.OR, new  RoleEdgeContent());
-					graph.addContextEdge(labelFinish, ctxOfParent, ctxOfFinish);
-					coord = true;
-					//put the start and the finish into the hash of coordination (node:type of coordination). The hash will be needed when chcking for negative contexts.
-					if (!coordCtxs.containsKey(start))
-						coordCtxs.put(start, "other");
-					if (!coordCtxs.containsKey(finish))
-						coordCtxs.put(finish, "other");
-					// if the parent of the start node are empty (= parents), then there is predicate coordination
-				} else {
-					// if the start and the finish are depending on other nodes in teh role graph, then there is no clausal coord but simple verbal one 
-					if (!graph.getRoleGraph().getInNeighbors(start).isEmpty() && !graph.getRoleGraph().getInNeighbors(finish).isEmpty() ){
-						// if we have verbal coordination, create a comb node of the two from whcih the two predicates will depend
-						SemanticNode<?> combNode = graph.getRoleGraph().getInNeighbors(start).iterator().next();
-						ContextNode top = new ContextNode("ctx("+combNode.getLabel()+")", new ContextNodeContent());
-						graph.addNode(top);
-						ContextHeadEdge labelStart = new ContextHeadEdge(GraphLabels.OR, new  RoleEdgeContent());
-						graph.addContextEdge(labelStart, top, ctxOfStart);
-						((SkolemNodeContent) start.getContent()).setContext(ctxOfStart.getLabel());
-						ContextHeadEdge labelFinish = new ContextHeadEdge(GraphLabels.OR, new  RoleEdgeContent());
-						graph.addContextEdge(labelFinish, top, ctxOfFinish);
-						((SkolemNodeContent) finish.getContent()).setContext(ctxOfFinish.getLabel());
-						// again, put everything int he hash
-						verbCoord = true;
-						if (!coordCtxs.containsKey(start) || (coordCtxs.containsKey(start) && coordCtxs.get(start).equals("clausal")))
-							coordCtxs.put(start, "verbal");
-						if (!coordCtxs.containsKey(finish))
-							coordCtxs.put(finish, "verbal");
-					// if they are not depending on any other nodes of the role graph, it means we have clausal coordination
-					} else {
-						// in this case we create a node top from which the two separate sentences depend
-						ContextNode top = new ContextNode("top", new ContextNodeContent());
-						graph.addNode(top);
-						ContextHeadEdge labelStart = new ContextHeadEdge(GraphLabels.OR, new  RoleEdgeContent());
-						// if there is also verbCoord within one of the sentences, then the combined node of this predicate should be used as the start
-						if (verbCoord == true){
-							ctxOfStart = graph.getContextGraph().getInNeighbors(ctxOfStart).iterator().next();
-						}
-						graph.addContextEdge(labelStart, top, ctxOfStart);
-						((SkolemNodeContent) start.getContent()).setContext(ctxOfStart.getLabel());
-						ContextHeadEdge labelFinish = new ContextHeadEdge(GraphLabels.OR, new  RoleEdgeContent());
-						graph.addContextEdge(labelFinish, top, ctxOfFinish);
-						((SkolemNodeContent) finish.getContent()).setContext(ctxOfFinish.getLabel());
-						clausalCoord = true;
-						// again, put everything int he hash
-						if (!coordCtxs.containsKey(start))
-							coordCtxs.put(start, "clausal");
-						if (!coordCtxs.containsKey(finish))
-							coordCtxs.put(finish, "clausal");
-					}
-				}
-			// if there is conjunction
-			} else if (edge.getLabel().equals("conj:and")){
-				// find the edge of the coord and get the start and the end nodes of this edge ( = the two parts of the coord)
-				SemanticNode<?> start = depGraph.getStartNode(edge);
-				SemanticNode<?> finish = depGraph.getEndNode(edge);
-				// if the start and the finish are depending on other nodes in teh role graph, then there is no clausal coord but simple verbal one 
-				if (!graph.getRoleGraph().getInNeighbors(start).isEmpty() && !graph.getRoleGraph().getInNeighbors(finish).isEmpty() ){
-					/* check if the start node has a parent. If empty, there is predicate coordination.
-					 * and we need to separate the two predicates*/
-					if  (depGraph.getInNeighbors(start).isEmpty()) {
-						SemanticNode<?> combNode = graph.getRoleGraph().getInNeighbors(start).iterator().next(); 
-						ContextHeadEdge combEdge1 = new ContextHeadEdge(GraphLabels.CONTEXT_HEAD, new  RoleEdgeContent());
-						ContextHeadEdge combEdge2 = new ContextHeadEdge(GraphLabels.CONTEXT_HEAD, new  RoleEdgeContent());
-						SemanticNode<?> ctxOfCombNode = new ContextNode("ctx("+combNode.getLabel()+")", new ContextNodeContent());
-						graph.addContextEdge(combEdge1, ctxOfCombNode, start);
-						graph.addContextEdge(combEdge2, ctxOfCombNode, finish);
-						verbCoord = true;
-						// again, put everything int he hash. If the "start" verb is already in the hash and has the value "clausal"
-						// then add it again with the type "verbal". The type "verbal" is then the main one for this verb.  
-						if (!coordCtxs.containsKey(start) || (coordCtxs.containsKey(start) && coordCtxs.get(start).equals("clausal")))
-							coordCtxs.put(start, "verbal");
-						if (!coordCtxs.containsKey(finish))
-							coordCtxs.put(finish, "verbal");
-					// if we dont have predicate coordination, we have simple one
-					} else {
-						coord = true;
-						if (!coordCtxs.containsKey(start))
-							coordCtxs.put(start, "other");
-						if (!coordCtxs.containsKey(finish))
-							coordCtxs.put(finish, "other");
-					}
-				// if they are not depending on any other nodes of the role graph, it means we have clausal coordination	
-				} else {
-					clausalCoord = true;
-					// again, put everything in the hash
-					if (!coordCtxs.containsKey(start))
-						coordCtxs.put(start, "clausal");
-					if (!coordCtxs.containsKey(finish))
-						coordCtxs.put(finish, "clausal");
-				}
+				integrateDisjunction(edge);
+			// if there is conjunction or there is neither/nor (in neither/nor both coordinated terms are negated and thus we have the same behavior as in conjunction)
+			} else if (edge.getLabel().equals("conj:and")  || edge.getLabel().equals("conj:nor")){
+				integrateConjunction(edge);
 			}
 		}
 	}
@@ -797,8 +876,6 @@ public class ContextMapper {
 	 * @throws IOException
 	 */
 	private void integrateImplicativeContexts() throws IOException{
-		//graph.displayRoles();
-		//graph.displayDependencies();
 		//go through each node of the role graph and see if it is such a word
 		for (SemanticNode<?> node : graph.getRoleGraph().getNodes()){
 			if (!(node instanceof SkolemNode))
@@ -871,9 +948,7 @@ public class ContextMapper {
 			if (foundComplAsChild == false){
 				for (SemanticNode<?> child : children){
 					if (child instanceof SkolemNode){
-						// only the children after the current node and with less than 2 in edges should be considered
-						if (((SkolemNodeContent) child.getContent()).getPosition() > ((SkolemNodeContent) node.getContent()).getPosition()
-								&& graph.getRoleGraph().getInEdges(child).size() < 2){
+						if (graph.getRoleGraph().getEdges(node, child).iterator().next().getLabel().equals("sem_obj")){
 							SemanticNode<?> ctxOfChild = addSelfContextNodeAndEdgeToGraph(child);
 							graph.addContextEdge(labelEdge,ctxOfImpl, ctxOfChild);
 							((SkolemNodeContent) child.getContent()).setContext(ctxOfImpl.getLabel());

@@ -140,7 +140,7 @@ public class RolesMapper {
 			clausalCoord = false;		
 		}
 		// make sure that the role graph is non-empty in the case of an imperative with you. If empty, fill it in.
-		if (graph.getRoleGraph().getNodes().isEmpty()){
+		/*if (graph.getRoleGraph().getNodes().isEmpty()){
 			RoleEdge roleEdge = new RoleEdge(GraphLabels.SUBJ, new RoleEdgeContent());
 			SkolemNodeContent subjNodeContent = new SkolemNodeContent();
 			subjNodeContent.setSurface("you");
@@ -158,12 +158,82 @@ public class RolesMapper {
 				((SkolemNodeContent) graph.getRootNode().getContent()).setContext("top");
 				((SkolemNodeContent) subjNode.getContent()).setContext("top");
 			}
-		}
+		}*/
 		
 		checkForMoreThanDoubleCoordination();
+		checkForNone();
+		
 		
 	}
 
+	/**
+	 * Deal with sentences containing "none". "None" is not recognized as a det:qmod, therefore we need to implement it separately
+	 * The dependent of none gets to be the head of this relation. None is only added as a specifier and as a context.
+	 * e.g. I like none of the boys and the girls.
+	 * Do this checking after the role graph has been created to make sure that all nodes are already there. If it would have been done
+	 * during the creation process, none might have been missed.
+	 */
+	private void checkForNone(){
+		//all nodes involved in the none-relation that have to be removed
+		ArrayList<SemanticNode<?>> nodesToRemove = new ArrayList<SemanticNode<?>>();
+		//all edges involved in the none-relation that have to be removed
+		ArrayList<SemanticEdge> edgToRemove = new ArrayList<SemanticEdge>();
+		//all edges that have to be added
+		HashMap<SemanticEdge,ArrayList<SemanticNode<?>>> edgesToAdd = new HashMap<SemanticEdge,ArrayList<SemanticNode<?>>>();
+		for (SemanticEdge edge : graph.getRoleGraph().getEdges()){
+			SemanticNode<?> depOfNone = null;
+			SemanticNode<?> start = graph.getRoleGraph().getStartNode(edge);
+			SemanticNode<?> finish = graph.getRoleGraph().getEndNode(edge);	
+			if (finish.getLabel().toLowerCase().contains("none")){
+				// get all the out nodes of "none" (there might be more than one if there is coordination, e.g. none of the boys and the girls)
+				for (SemanticNode<?> n : graph.getRoleGraph().getOutNeighbors(finish)){
+					depOfNone = n;
+					// check if the depOfNone is a child of a combined concept (i.e. if there is coordination)
+					if (depOfNone instanceof SkolemNode){
+						checkForOfOfNone(depOfNone, nodesToRemove, edgToRemove);			
+					// if there is no coordination involved 
+					} else {					
+						for (SemanticNode<?> child : graph.getRoleGraph().getOutNeighbors(depOfNone)){
+							checkForOfOfNone(child, nodesToRemove, edgToRemove);
+						}
+					}
+				}
+				// create the edge but do not add it yet to the role graph; otherwise, ConcurrentModificationException
+				RoleEdge roleEdge = new RoleEdge(edge.getLabel(), new RoleEdgeContent());
+				// the start and the finish fo the edge are stored as a list of nodes (index 0: start, index 1:finish)
+				ArrayList<SemanticNode<?>> startFinish = new ArrayList<SemanticNode<?>>();
+				startFinish.add(start);
+				startFinish.add(depOfNone);
+				edgesToAdd.put(roleEdge, startFinish);
+				// the current edge(whatever connects none with the main verb) and the none node have to be removed
+				edgToRemove.add(edge);
+				nodesToRemove.add(finish);
+			}
+		}
+		// add and remove stuff
+		for (SemanticEdge eToRe : edgToRemove){
+			graph.removeRoleEdge(eToRe);
+		}
+		for (SemanticNode<?> nToRe : nodesToRemove){
+			graph.removeRoleNode(nToRe);
+		}
+		for (SemanticEdge e : edgesToAdd.keySet()){
+			graph.addRoleEdge(e, edgesToAdd.get(e).get(0), edgesToAdd.get(e).get(1));;
+		}
+		
+	}
+	
+	// get all the out edges of the node to capture the "of" of the expression. Add its edge to the edgesToRemove so that it is deleted and also the node itself
+	private void checkForOfOfNone(SemanticNode<?> node, ArrayList<SemanticNode<?>> nodesToRemove, ArrayList<SemanticEdge> edgToRemove){
+		for (SemanticEdge e: graph.getRoleGraph().getOutEdges(node)){
+			if (e.getLabel().contains("pmod")){
+				edgToRemove.add(e);
+				nodesToRemove.add(graph.getFinishNode(e));
+				break;
+			}
+		}
+	}
+	
 	/**
 	 * Integrate all edges of the role graph apart from the combined node which is handled in the integrateCoordinatingRoles() method
 	 */
@@ -179,12 +249,12 @@ public class RolesMapper {
 			else if (edgesToRemove.contains(edge))
 				continue;
 			SemanticNode<?> start = depGraph.getStartNode(edge);
-			SemanticNode<?> finish = depGraph.getEndNode(edge);
+			SemanticNode<?> finish = depGraph.getEndNode(edge);		
 			// integrate the basic roles for these edges
 			integrateBasicRoles(start,finish,edge.getLabel());
 			traversed.add(edge);
 		}
-		//graph.displayRoles();
+		
 		// list that holds all lists of begin-end-node-pairs that have alread been added
 		ArrayList<ArrayList<SemanticNode<?>>> addedComb = new ArrayList<ArrayList<SemanticNode<?>>>();
 		// go through the combEdges (= edges that involve coordinated node)
@@ -370,7 +440,7 @@ public class RolesMapper {
 		String role = "";
 	
 		// only go here if there is coordination in the current edge 
-		if (edgeLabel.contains("conj") ){
+		if (edgeLabel.contains("conj:") ){
 			// create the combined node of the coordinated terms and the edge of one of its children
 			if (graph.getRoleGraph().getEdges(start, finish).isEmpty() ){//!graph.getRoleGraph().containsNode(start) && !graph.getRoleGraph().containsNode(finish)  ){
 				TermNode combNode = new TermNode(start+"_"+edgeLabel.substring(5)+"_"+finish, new TermNodeContent());
@@ -445,10 +515,7 @@ public class RolesMapper {
 				RoleEdge combEdge = new RoleEdge(role, new RoleEdgeContent());
 				graph.addRoleEdge(combEdge, combNode, node);
 			}
-		}
-		
-		String test = "";
-		
+		}		
 	}
 
 	/**
@@ -468,7 +535,7 @@ public class RolesMapper {
 		break;
 		case "dobj" : role = GraphLabels.OBJ;
 		break;
-		case "iobj" : role = GraphLabels.XCOMP;
+		case "iobj" : role = GraphLabels.IOBJ;
 		break;
 		// only add it when the verb coord is false; when true, it will be added later
 		case "nsubj" : role = GraphLabels.SUBJ;
@@ -500,7 +567,15 @@ public class RolesMapper {
 		// only add it when the verb coord is false; when true, it will be added later
 		case "nsubj:xsubj": role = GraphLabels.SUBJ;
 		break;
-		case "amod": role = GraphLabels.AMOD;
+		case "amod": boolean found = false;
+		// if the word is already included in the property graph as a specifier (e.g. many, few, etc) dont add it here again
+			for (SemanticEdge out : graph.getPropertyGraph().getOutEdges(start)){
+							if (out.getLabel().equals("specifier") && finish.getLabel().contains(out.getDestVertexId())){
+								found = true;						
+							}
+					}
+			if (found == false)
+				role = GraphLabels.AMOD;
 		break;
 		case "advmod": role = GraphLabels.AMOD;
 		break;
@@ -510,7 +585,9 @@ public class RolesMapper {
 		break;
 		case "appos":role = GraphLabels.RESTRICTION;
 		break;
-		case "nummod": role = GraphLabels.RESTRICTION;
+		case "case" : if (passive == false){
+			role = GraphLabels.PMOD;
+			}
 		}
 		// nmod can have difefrent subtypes, therefore it is put here and not within the switch 
 		if (role.equals("") && edgeLabel.contains("nmod")){
@@ -525,9 +602,11 @@ public class RolesMapper {
 		if (!role.equals("")){
 			RoleEdge roleEdge = new RoleEdge(role, new RoleEdgeContent());
 			graph.addRoleEdge(roleEdge, start, finish);
-			if (start instanceof SkolemNode && finish instanceof SkolemNode){
-				// at this point set the contexts of all words that get involved to the role graph. the context is top at the moment 
-				((SkolemNodeContent) start.getContent()).setContext("top");
+			// at this point set the contexts of all words that get involved to the role graph. the context is top at the moment
+			if (start instanceof SkolemNode){				 
+				((SkolemNodeContent) start.getContent()).setContext("top");			
+			}
+			if (finish instanceof SkolemNode){
 				((SkolemNodeContent) finish.getContent()).setContext("top");
 			}
 		}

@@ -41,9 +41,11 @@ public class GraphLabels {
 	
 	public static final String OUGHT = "ought";
 	
+	public static final String NEED = "need";
+	
 	
 	public static final Set<String> contextEdgeLabels = new HashSet<String>(Arrays.asList(new String[] {
-			CONTEXT_HEAD, OR, NOT, IMPERATIVE, 	INTERROGATIVE, MUST, MAY, MIGHT, SHOULD, OUGHT, VER, ANTIVER, AVER
+			CONTEXT_HEAD, OR, NOT, IMPERATIVE, 	INTERROGATIVE, MUST, MAY, MIGHT, SHOULD, OUGHT, NEED, VER, ANTIVER, AVER
 	}));
 
 	public static final String PRONOUN_RESOLUTION = "prounoun_res";
@@ -60,10 +62,10 @@ public class GraphLabels {
 	public static final String SPECIFIER = "specifier";
 	public static final String TENSE = "tense";
 	public static final String ASPECT = "aspect";
-	public static final String NMOD_NUM = "nmod_num";
+	public static final String PART_OF = "part_of";
 	public static final String NTYPE = "name";
 	public static final Set<String> propertyEdgeLabels = new HashSet<String>(Arrays.asList(new String[] {
-			CARDINALITY, SPECIFIER, TENSE, ASPECT, NMOD_NUM, NTYPE
+			CARDINALITY, SPECIFIER, TENSE, ASPECT, PART_OF, NTYPE
 	}));
 	
 	
@@ -72,15 +74,16 @@ public class GraphLabels {
 	public static final String AMOD = "amod";
 	public static final String IS_ELEMENT = "is_element";
 	public static final String RESTRICTION = "rstr";
-	public static final String P = "P";
+	public static final String PMOD = "pmod";
 	public static final String SUBJ = "sem_subj";
 	public static final String OBJ = "sem_obj";
+	public static final String IOBJ = "sem_iobj";
 	public static final String COMP = "sem_comp";
 	public static final String XCOMP = "sem_xcomp";
 	public static final String NMOD = "nmod";
 	
 	public static final Set<String> roleEdgeLabels = new HashSet<String>(Arrays.asList(new String[] {
-			AMOD, IS_ELEMENT, RESTRICTION, P, SUBJ, OBJ, COMP, XCOMP, NMOD
+			AMOD, IS_ELEMENT, RESTRICTION, PMOD, SUBJ, OBJ, COMP, XCOMP, NMOD
 	}));
 	
 }
