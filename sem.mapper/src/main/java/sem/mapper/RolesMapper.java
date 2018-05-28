@@ -316,10 +316,9 @@ public class RolesMapper {
 	 * @return
 	 */
 	private SemGraph createSubgraph(SemanticNode<?> node, SemanticNode<?> nodeToExclude, Set<SemanticEdge> listOfSubEdges, Set<SemanticNode<?>> listOfSubNodes){
-		//graph.displayDependencies();
+		graph.displayDependencies();
 		// got through all children edges of the specified node
-		for (SemanticEdge subEdge : graph.getOutEdges(node)){
-			traversedEdges.add(subEdge);
+		for (SemanticEdge subEdge : graph.getOutEdges(node)){	
 			// if the edge finishes with the nodeToEclude, move on
 			if (graph.getFinishNode(subEdge).equals(nodeToExclude))
 				continue;
@@ -334,6 +333,7 @@ public class RolesMapper {
 				// do the same for the finish node of the current edge (recursively so that children of children are also added)
 				createSubgraph(graph.getFinishNode(subEdge), nodeToExclude, listOfSubEdges, listOfSubNodes);
 			}
+			traversedEdges.add(subEdge);
 		}
 		// create the subgraph
 		return graph.getSubGraph(listOfSubNodes, listOfSubEdges);

@@ -710,10 +710,11 @@ public class SemanticGraph implements Serializable {
 				if (n.equals(start) || roleGraph.getOutReach(n).contains(start)){
 					roleRoot = n;
 					break;
-				} else {
-					stringToDisplay.append("Sentence was parsed but not converted to string because of unconnected nodes in role graph");
-					return stringToDisplay.toString();
-				}
+				} 
+			}
+			if (roleRoot == null) {
+				stringToDisplay.append("Sentence was parsed but not converted to string because of unconnected nodes in role graph");
+				return stringToDisplay.toString();
 			}			
 			// get the distance of each of the nodes from the root node
 			List<SemanticEdge> distOfStart = roleGraph.getShortestPath(roleRoot, start);
@@ -799,6 +800,7 @@ public class SemanticGraph implements Serializable {
 		} 
 		
 		stringToDisplay.replace(0, 1, "");
+		stringToDisplay.insert(0, getModalsAsText(stringToDisplay.toString(), ctxRoot));
 		return stringToDisplay.toString();
 		
 	}
@@ -825,16 +827,37 @@ public class SemanticGraph implements Serializable {
 				SemanticEdge link = contextGraph.getEdges(parent, parentCtx).iterator().next();
 				ctx = ","+parent+"_"+link;
 			}
+			else if (parentCtx.getLabel().contains("ctx(")){
+				SemanticEdge link = contextGraph.getEdges(parentCtx, node).iterator().next();
+				ctx = ","+parentCtx+"_"+link;
+			}
 			else if (parentCtx.getLabel().equals("top")){
 				ctx = ",top";
 			}
 		}
 		// if the node is not within the context graph, get the context from the skolem node itself
 		else if (node instanceof SkolemNode)
-				ctx = ","+((SkolemNodeContent) node.getContent()).getContext()+"_inst";
+				ctx = ","+((SkolemNodeContent) node.getContent()).getContext()+"_veridical";
 
 		nodeText += ctx+")";
 		return nodeText;
+	}
+	
+	private String getModalsAsText(String stringToDisplay, SemanticNode<?> ctxRoot){
+		String textToAdd = "";
+		for (SemanticEdge ctxE : contextGraph.getOutEdges(ctxRoot)){
+			SemanticNode<?> endNode = contextGraph.getEndNode(ctxE);
+			 Pattern p1 = Pattern.compile("\\("+endNode.getLabel()+",.+top_"+ctxE.getLabel()+"\\)");
+			 Matcher m1 = p1.matcher(stringToDisplay);	 
+			if (!ctxE.getLabel().equals("ctx_hd") && m1.find() == false){
+				Pattern p2 = Pattern.compile("\\("+endNode.getLabel().substring(4,endNode.getLabel().length()-1)+",.+top_"+ctxE.getLabel()+"\\)");
+				Matcher m2 = p2.matcher(stringToDisplay);
+				if (m2.find() == false)
+					textToAdd += "("+endNode.getLabel()+",top_"+ctxE+")\n";
+			}
+		}
+		
+		return textToAdd;
 	}
 
 	

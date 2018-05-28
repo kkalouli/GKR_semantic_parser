@@ -477,7 +477,7 @@ public class DepGraphToSemanticGraph {
 	public void processTestsuite(String file, DepGraphToSemanticGraph semConverter) throws IOException{
 		BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"));
 		// true stands for append = true (dont overwrite)
-		BufferedWriter writer = new BufferedWriter( new FileWriter(file.substring(0,file.indexOf(".csv"))+"_processed.csv", true));
+		BufferedWriter writer = new BufferedWriter( new FileWriter(file.substring(0,file.indexOf(".txt"))+"_processed.csv", true));
 		String strLine;
 		while ((strLine = br.readLine()) != null) {
 			if (strLine.startsWith("####")){
@@ -499,20 +499,20 @@ public class DepGraphToSemanticGraph {
 
 
 	public static void main(String args[]) throws IOException {
-		DepGraphToSemanticGraph semConverter = new DepGraphToSemanticGraph();
-		semConverter.processTestsuite("/Users/kkalouli/Documents/Stanford/comp_sem/SICK/SICK_unique_sent_for_parser.csv", semConverter);
-		/*DepGraphToSemanticGraph semGraph = new DepGraphToSemanticGraph();
-		semantic.graph.SemanticGraph graph = semGraph.sentenceToGraph("A Seadoo is being ridden by a woman.", semGraph);
+		//DepGraphToSemanticGraph semConverter = new DepGraphToSemanticGraph();
+		//semConverter.processTestsuite("/Users/kkalouli/Documents/Stanford/comp_sem/forDiss/mixed_testsuite.txt", semConverter);
+		DepGraphToSemanticGraph semGraph = new DepGraphToSemanticGraph();
+		semantic.graph.SemanticGraph graph = semGraph.sentenceToGraph("The boy faked the illness.", semGraph);
 		graph.displayDependencies();
 		graph.displayProperties();
 		//graph.displayLex();
 		graph.displayContexts();
 		graph.displayRoles();
-		//graph.generalDisplay();
-		//graph.display();
+		graph.generalDisplay();
+		graph.display();
 		System.out.println(graph.displayAsString());
 		for (SemanticNode<?> node : graph.getDependencyGraph().getNodes()){
 				System.out.println(node.getLabel()+((SkolemNodeContent) node.getContent()).getContext());
-		}*/
+		}
 	}
 }
