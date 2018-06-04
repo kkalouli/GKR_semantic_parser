@@ -57,3 +57,11 @@ Navigate to the cloned directory (GKR_semantic_parser) and do: gradle build
 If the build is successful, you can simply import the project in Eclipse or any other platform you wish.
 For Eclipse: import it as a gradle project
 (for changes made within eclipse, the 'gradle cleanEclipse' command should refresh the eclipse view)
+
+
+
+How to test a sentence:
+
+In the subproject sem.mapper there is a class named DepGraphToSemanticGraph.
+In the main method at the end of this class you can run only one sentence or a testsuite with sentences: just comment in or
+out the corresponding method.
