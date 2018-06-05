@@ -65,3 +65,21 @@ How to test a sentence:
 In the subproject sem.mapper there is a class named DepGraphToSemanticGraph.
 In the main method at the end of this class you can run only one sentence or a testsuite with sentences: just comment in or
 out the corresponding method.
+
+
+
+Copyright 2018 Aikaterini-Lida Kalouli and Richard Crouch
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+   
+   See LICENSE file for more details
