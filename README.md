@@ -69,4 +69,5 @@ out the corresponding method.
 
 
 Copyright 2018 Aikaterini-Lida Kalouli and Richard Crouch
+
 See LICENSE file for more details.
