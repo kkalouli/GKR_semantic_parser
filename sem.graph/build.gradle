@@ -1,0 +1,15 @@
+dependencies {
+       
+	// https://mvnrepository.com/artifact/org.jgrapht/jgrapht-core
+	compile group: 'org.jgrapht', name: 'jgrapht-core', version: '1.0.1'
+	// https://mvnrepository.com/artifact/org.jgrapht/jgrapht-ext
+	compile group: 'org.jgrapht', name: 'jgrapht-ext', version: '1.0.1'
+	compile 'jgraph:jgraph:5.13.0.0'
+	// https://mvnrepository.com/artifact/org.springframework/spring-core
+	compile group: 'org.springframework', name: 'spring-core', version: '4.3.7.RELEASE'
+	// https://mvnrepository.com/artifact/org.tinyjee.jgraphx/jgraphx
+	compile group: 'org.tinyjee.jgraphx', name: 'jgraphx', version: '2.0.0.1'
+	
+	testCompile 'junit:junit:4.11'
+}
+
