@@ -1,7 +1,5 @@
 # GKR_semantic_parser
 
-!!! Complete code coming on the 19th of June!!!
-
 This is the Graphical Knowledge Representation (GKR) parser. It transforms a given sentence into a layered semantic graph as described
 in *Kalouli, A.-L. and Richard Crouch. 2018. GKR: the Graphical Knowledge Representation for semantic parsing. In Proceedings of SEMBEaR 2018
 @ NAACL 2018* : http://aclweb.org/anthology/W18-1304 
@@ -82,4 +80,3 @@ Copyright 2018 Aikaterini-Lida Kalouli and Richard Crouch
 
 See LICENSE file for more details.
 
-!!! Complete code coming on the 19th of June!!!
