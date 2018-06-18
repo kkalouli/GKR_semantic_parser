@@ -19,40 +19,40 @@ How to install and run the GKR parser:
 1. Clone the repository into your desired directory: ``` git clone https://github.com/kkalouli/GKR_semantic_parser.git ```
 
 2.  Download WordNet from http://wordnet.princeton.edu/wordnet/download/.
-In order to use WordNet, you must configure the file GKR_semantic_parser/sem.mapper/gkr.properties. 
+In order to use WordNet, you must configure the file *GKR_semantic_parser/sem.mapper/gkr.properties*. 
 In particular you must change the following line:
 
 ``` wn_location=/usr/local/Cellar/wordnet/3.1/dict ```
 
 Change the location and set the directory in which the WordNet dictionary is installed.
 
-3. Download and install JIGSAW as described in https://github.com/pippokill/JIGSAW. 
+3. Download and install JIGSAW as described in <https://github.com/pippokill/JIGSAW> 
 Although you will have downloaded WordNet by now, make sure you follow the JIGSAW instructions for modifying the JIGSAW config file in
-JIGSAW/resources/wn_file_properties.xml . In the same JIGSAW config file replace the relative paths of nlp.tokenModel, nlp.posTagModel and 
-nlp.stopWordFile with the absolute paths of their location in your system.
+*JIGSAW/resources/wn_file_properties.xml* . In the same JIGSAW config file replace the relative paths of *nlp.tokenModel*, *nlp.posTagModel* and 
+*nlp.stopWordFile* with the absolute paths of their location in your system.
 
-In order to use JIGSAW, you must also configure the file GKR_semantic_parser/sem.mapper/gkr.properties. 
+In order to use JIGSAW, you must also configure the file *GKR_semantic_parser/sem.mapper/gkr.properties*. 
 In particular you must change the following line:
 
 ``` jigsaw_props=jigsaw.properties ```
 
-Change the properties file name and set the absolute path in which your jigsaw.properties file is installed. 
+Change the properties file name and set the absolute path in which your *jigsaw.properties* file is installed. 
 
 4. Download and install SUMO as described in https://github.com/ontologyportal/sigmakee. 
-In order to use SUMO, you must also configure the file GKR_semantic_parser/sem.mapper/gkr.properties. 
+In order to use SUMO, you must also configure the file *GKR_semantic_parser/sem.mapper/gkr.properties*. 
 In particular you must change the following line:
 
 ``` sumo_location=/Users/kkalouli/Documents/workspace/sumo ```
 
 Change the location and set the location path in which you installed the parent SUMO folder. 
 
-5. Download the jar file edu.mit.jwi_2.4.0.jar from https://projects.csail.mit.edu/jwi/.
+5. Download the jar file *edu.mit.jwi_2.4.0.jar* from <https://projects.csail.mit.edu/jwi/>
 
 6. Create a new folder *GKR_libs* somewhere in your system. Copy in this folder the following files:
-- the edu.mit.jwi_2.4.0.jar jar file
-- the JIGSAW.jar file (found in the folder dist of your JIGSAW installation)
-- the maxent-3.0.0.jar file (found in the folder dist/lib/ of your JIGSAW installation)
-- opennlp-tools-1.5.0.jar (found in the folder dist/lib/ of your JIGSAW installation)
+- the *edu.mit.jwi_2.4.0.jar* jar file
+- the *JIGSAW.jar* file (found in the folder dist of your JIGSAW installation)
+- the *maxent-3.0.0.jar* file (found in the folder *dist/lib/* of your JIGSAW installation)
+- *opennlp-tools-1.5.0.jar* (found in the folder *dist/lib/* of your JIGSAW installation)
 
 
 Go back into the cloned directory and find the *build.gradle* file of the *sem.mapper* folder. Change the following line
@@ -60,7 +60,7 @@ Go back into the cloned directory and find the *build.gradle* file of the *sem.m
 to point at the location in which you created the *GKR_libs* folder. 
 
 You are all set! You can now build the project:
-Navigate to the cloned directory (GKR_semantic_parser) and do: ``` gradle build ```
+Navigate to the cloned directory (*GKR_semantic_parser*) and do: ``` gradle build ```
 
 If the build is successful, you can simply import the project in Eclipse or any other platform you wish.
 For Eclipse: import it as a gradle project
