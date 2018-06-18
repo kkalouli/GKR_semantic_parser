@@ -3,10 +3,13 @@
 !!! Complete code coming on the 19th of June!!!
 
 This is the Graphical Knowledge Representation (GKR) parser. It transforms a given sentence into a layered semantic graph as described
-in Kalouli, A.-L. and Richard Crouch. 2018. GKR: the Graphical Knowledge Representation for semantic parsing. In Proceedings of SEMBEaR 2018
-@ NAACL 2018 : http://aclweb.org/anthology/W18-1304 
+in *Kalouli, A.-L. and Richard Crouch. 2018. GKR: the Graphical Knowledge Representation for semantic parsing. In Proceedings of SEMBEaR 2018
+@ NAACL 2018* : http://aclweb.org/anthology/W18-1304 
 
-Author/developer: Aikaterini-Lida Kalouli <aikaterini-lida.kalouli@uni-konstanz.de> and Richard Crouch <dick.crouch@gmail.com>
+Companion paper: *Crouch, R. and A.-L. Kalouli. 2018. Named Graphs for Semantic Representations. In Proceedings of \*SEM 2018
+@ NAACL 2018* : http://aclweb.org/anthology/S18-2013 
+
+Author/developer: Aikaterini-Lida Kalouli (<aikaterini-lida.kalouli@uni-konstanz.de>) and Richard Crouch (<dick.crouch@gmail.com>)
 
 If you use this software in writing scientific papers, or you use this
 software in any other medium serving scientists or students (e.g. web-sites,
@@ -47,11 +50,14 @@ Change the location and set the location path in which you installed the parent 
 
 5. Download the jar file edu.mit.jwi_2.4.0.jar from https://projects.csail.mit.edu/jwi/.
 
-6. Create a new folder GKR_libs somewhere in your system. Copy in this folder the following files:
+6. Create a new folder *GKR_libs* somewhere in your system. Copy in this folder the following files:
 - the edu.mit.jwi_2.4.0.jar jar file
 - the JIGSAW.jar file (found in the folder dist of your JIGSAW installation)
 - the maxent-3.0.0.jar file (found in the folder dist/lib/ of your JIGSAW installation)
 - opennlp-tools-1.5.0.jar (found in the folder dist/lib/ of your JIGSAW installation)
+Go back into the cloned directory and find the *build.gradle* file of the *sem.mapper* folder. Change the following line
+```compile fileTree(dir: '/Users/kkalouli/Documents/libraries/GKR_libs/', include: ['*.jar']) ```
+to point at the location you created the *GKR_libs* folder. 
 
 You are all set! You can now build the project:
 Navigate to the cloned directory (GKR_semantic_parser) and do: ``` gradle build ```
