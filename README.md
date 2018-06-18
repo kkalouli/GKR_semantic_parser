@@ -55,11 +55,11 @@ Change the location and set the location path in which you installed the parent 
 - the JIGSAW.jar file (found in the folder dist of your JIGSAW installation)
 - the maxent-3.0.0.jar file (found in the folder dist/lib/ of your JIGSAW installation)
 - opennlp-tools-1.5.0.jar (found in the folder dist/lib/ of your JIGSAW installation)
-Go back into the cloned directory and find the *build.gradle* file of the *sem.mapper* folder. 
 
-Change the following line
+
+Go back into the cloned directory and find the *build.gradle* file of the *sem.mapper* folder. Change the following line
 ```compile fileTree(dir: '/Users/kkalouli/Documents/libraries/GKR_libs/', include: ['*.jar']) ```
-to point at the location you created the *GKR_libs* folder. 
+to point at the location in which you created the *GKR_libs* folder. 
 
 You are all set! You can now build the project:
 Navigate to the cloned directory (GKR_semantic_parser) and do: ``` gradle build ```
