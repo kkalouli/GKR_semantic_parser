@@ -34,7 +34,7 @@ Although you will have downloaded WordNet by now, make sure you follow the JIGSA
 In order to use JIGSAW, you must also configure the file *GKR_semantic_parser/sem.mapper/gkr.properties*. 
 In particular you must change the following line:
 
-``` jigsaw_props=jigsaw.properties ```
+``` jigsaw_props=/Users/kkalouli/Documents/libraries/JIGSAW-master/resources/jigsaw.properties ```
 
 Change the properties file name and set the absolute path in which your *jigsaw.properties* file is installed. 
 
