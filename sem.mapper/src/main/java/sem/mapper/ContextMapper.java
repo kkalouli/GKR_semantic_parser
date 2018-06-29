@@ -170,11 +170,14 @@ public class ContextMapper {
 	
 	/**
 	 * Check if there are any postintegration changes necessary.
-	 * Current case: there is an implcative verb and its embedded verb is negated, e.g. She knew that he had not arrived yet.
-	 * In such cases there are still two top contexts involved: the top context of the implicative verb and the top contect of the 
-	 * negated verb. Thus, the negated context has to be embedded into the implicative context.  
+	 * Case 1: there is an implcative verb and its embedded verb is negated, e.g. She knew that he had not arrived yet.
+	 * In such cases there are still two top contexts involved: the top context of the implicative verb and the top context of the 
+	 * negated verb. Thus, the negated context has to be embedded into the implicative context. 
+	 * Case 2: there is an implicative verb with negation. In these cases an extra node has been added, called "negation". This node is only "storing" what is the
+	 * instantiability relation of the child to the negated context because this relation needs to be added at the end. This node gets deleted then.
 	 */
 	private void checkForPostIntegrationMistakes(){
+		// Case 1
 		HashMap<String, SemanticNode<?>> nodeLabels = new HashMap<String, SemanticNode<?>>();
 		ArrayList<SemanticNode<?>> sameNodes = new ArrayList<SemanticNode<?>>();	
 		// find any ctx nodes that are exactly the same because those are going to be merged into one
@@ -198,6 +201,10 @@ public class ContextMapper {
 		// go through the same nodes
 		for (SemanticNode<?> node : sameNodes){
 			// find the context in which they belong
+			if (graph.getContextGraph().getInNeighbors(node).isEmpty()){
+				nodeToEmbed = node;
+				continue;
+			}
 			SemanticNode<?> ctx = graph.getContextGraph().getInNeighbors(node).iterator().next();
 			SemanticNode<?> ctxHead = null;
 			// get the head of the context they belong
@@ -206,7 +213,7 @@ public class ContextMapper {
 					ctxHead = graph.getFinishNode(out);
 			}	
 			// if this head is implicative, then this is the head to be taken as the top context (and the other one will be embedded into that)
-			if (implCtxs.containsKey(ctxHead)){
+			if (implCtxs.containsKey(ctxHead) || ctxHead.getLabel().contains("not_") ){
 				top = ctx;
 				connector = graph.getContextGraph().getEdges(ctx,node).iterator().next();
 				// do not put the head node of this node to the nodesToRemove
@@ -235,6 +242,32 @@ public class ContextMapper {
 		for (SemanticEdge e:  edgesToRemove){
 			graph.removeContextEdge(e);
 		}
+		
+		// Case 2
+		SemanticNode<?> toRemove = null;
+		for (SemanticNode<?> n : graph.getContextGraph().getNodes()){
+			// check if there is a node called negation: this node comes with implicative contexts and the edge between this node and its child
+			// is the instatiability relation of that child node in the top context
+			if (n.getLabel().equals("negation")){
+				// get the child: the one to be instantiated or not
+				SemanticNode<?> child = graph.getContextGraph().getOutNeighbors(n).iterator().next();
+				//get the edge type
+				SemanticEdge instanEdge = graph.getContextGraph().getEdges(n, child).iterator().next();
+				// create a new edge of the same type
+				SemanticEdge edgeToAdd = new ContextHeadEdge(instanEdge.getLabel(), new  RoleEdgeContent());
+				// remove the current edge
+				graph.removeContextEdge(instanEdge);
+				// get the parent of the child
+				SemanticNode<?> parentOfChild = graph.getContextGraph().getInNeighbors(child).iterator().next();
+				// get the parent of the parent (= the negation)
+				SemanticNode<?> parentOfParent = graph.getContextGraph().getInNeighbors(parentOfChild).iterator().next();
+				// add the new edge
+				graph.addContextEdge(edgeToAdd,parentOfParent, child);
+				toRemove = n;
+			}
+		}
+		// remove the negation node
+		graph.removeContextNode(toRemove);
 	}
 
 	/**
@@ -350,6 +383,8 @@ public class ContextMapper {
 	 * @param previousNegNode
 	 */
 	private void integrateNotContexts(SemanticNode<?> node, SemanticNode<?> negNode, SemanticNode<?> previousNegNode){
+		//graph.displayContexts();
+		//graph.displayDependencies();
 		// initialize the head of the negation
 		SemanticNode<?> head = null;
 		// initialize the context of the head of the negation
@@ -446,7 +481,7 @@ public class ContextMapper {
 		if (head instanceof SkolemNode)
 			((SkolemNodeContent) head.getContent()).setContext(ctxHead.getLabel());
 		setContextsRecursively(head, head);
-		//graph.displayContexts();
+		graph.displayContexts();
 	}
 	
 	/**
@@ -745,7 +780,7 @@ public class ContextMapper {
 					|| ((SkolemNodeContent) node.getContent()).getStem().equals("nothing") 
 					|| ((SkolemNodeContent) node.getContent()).getStem().equals("noone") ){
 				integrateNobodyContexts( node, negNode, previousNegNode);
-			}	
+			}
 		}
 	}
 
@@ -992,25 +1027,16 @@ public class ContextMapper {
 				if (!mapOfImpl.containsKey(stem+comple)) 
 					continue;
 			}
-			String truth;
-			//System.out.println(mapOfImpl);
-			// depending on whether there is negaiton or not, take the correct truth condition
+			// get the truth condition of that stem+comple from the hash: take the positive truth condition even if it's a negated context for now 
+			String truth = mapOfImpl.get(stem+comple).split("_")[0];
+			ContextNode negation = null;
+			// if there is negation create a new node which will be added to the graph to hold the truth condition of the negation
 			if (isNeg == true){
-				truth = mapOfImpl.get(stem+comple).split("_")[1];
-			} else{
-				truth = mapOfImpl.get(stem+comple).split("_")[0];
-			}
+				negation = new ContextNode("negation", new ContextNodeContent());
+			} 
 			// put the node into the hash with the implicatives
 			implCtxs.put(node, "impl");
-			ContextHeadEdge labelEdge = null;
-			// depending on the turht value, create the correct edge
-			if (truth.equals("N")){
-				labelEdge = new ContextHeadEdge(GraphLabels.ANTIVER, new  RoleEdgeContent());
-			} else if (truth.equals("P")){
-				labelEdge = new ContextHeadEdge(GraphLabels.VER, new  RoleEdgeContent());
-			}  else if (truth.equals("U")){
-				labelEdge = new ContextHeadEdge(GraphLabels.AVER, new  RoleEdgeContent());
-			}  
+			ContextHeadEdge labelEdge = getEdgeLabelAccordingToTruthCondition(truth);
 			// add the edge and the nodes to the context graph
 			SemanticNode<?> ctxOfImpl = addSelfContextNodeAndEdgeToGraph(node);
 			Set<SemanticNode<?>>children = graph.getRoleGraph().getOutNeighbors(node);
@@ -1023,6 +1049,11 @@ public class ContextMapper {
 						graph.addContextEdge(labelEdge,ctxOfImpl, ctxOfChild);
 						((SkolemNodeContent) child.getContent()).setContext(ctxOfImpl.getLabel());
 						foundComplAsChild = true;
+						// if there is negation, get the corresponding edge and add a node from the negation node to the current ctxOfChild
+						if (negation != null){
+							labelEdge = getEdgeLabelAccordingToTruthCondition(mapOfImpl.get(stem+comple).split("_")[1]);
+							graph.addContextEdge(labelEdge,negation, ctxOfChild);
+						}
 					}
 				}
 			}
@@ -1033,10 +1064,33 @@ public class ContextMapper {
 							SemanticNode<?> ctxOfChild = addSelfContextNodeAndEdgeToGraph(child);
 							graph.addContextEdge(labelEdge,ctxOfImpl, ctxOfChild);
 							((SkolemNodeContent) child.getContent()).setContext(ctxOfImpl.getLabel());
+							// if there is negation, get the corresponding edge and add a node from the negation node to the current ctxOfChild
+							if (negation != null){
+								labelEdge = getEdgeLabelAccordingToTruthCondition(mapOfImpl.get(stem+comple).split("_")[1]);
+								graph.addContextEdge(labelEdge,negation, ctxOfChild);
+							}
 						}
 					}
 				}	
 			}	
 		}
+	}
+	
+	/***
+	 * Depending on the polarity value given (N, P, U), create the correct edge
+	 * @param truth
+	 * @return
+	 */
+	private ContextHeadEdge getEdgeLabelAccordingToTruthCondition(String truth){
+		ContextHeadEdge labelEdge = null;
+	
+		if (truth.equals("N")){
+			labelEdge = new ContextHeadEdge(GraphLabels.ANTIVER, new  RoleEdgeContent());
+		} else if (truth.equals("P")){
+			labelEdge = new ContextHeadEdge(GraphLabels.VER, new  RoleEdgeContent());
+		}  else if (truth.equals("U")){
+			labelEdge = new ContextHeadEdge(GraphLabels.AVER, new  RoleEdgeContent());
+		}
+		return labelEdge;
 	}
 }

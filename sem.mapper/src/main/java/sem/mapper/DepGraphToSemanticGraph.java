@@ -531,7 +531,7 @@ public class DepGraphToSemanticGraph {
 	public static void main(String args[]) throws IOException {
 		DepGraphToSemanticGraph semConverter = new DepGraphToSemanticGraph();
 		//semConverter.processTestsuite("/Users/kkalouli/Documents/Stanford/comp_sem/forDiss/mixed_testsuite.txt", semConverter);		
-		semConverter.processSentence("The boy faked the illness.", semConverter);		
+		semConverter.processSentence("He didn't forget that she had called.", semConverter);		
 		
 	}
 }
