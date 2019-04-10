@@ -1,6 +1,7 @@
 package sem.mapper;
 
 import java.awt.List;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -11,20 +12,20 @@ import java.util.Set;
 import org.jgrapht.graph.DirectedSubgraph;
 import org.jgrapht.graph.Subgraph;
 
-import semantic.graph.SemGraph;
-import semantic.graph.SemJGraphT;
-import semantic.graph.SemanticEdge;
-import semantic.graph.SemanticGraph;
-import semantic.graph.SemanticNode;
-import semantic.graph.vetypes.ContextNode;
-import semantic.graph.vetypes.ContextNodeContent;
-import semantic.graph.vetypes.GraphLabels;
-import semantic.graph.vetypes.RoleEdge;
-import semantic.graph.vetypes.RoleEdgeContent;
-import semantic.graph.vetypes.SkolemNode;
-import semantic.graph.vetypes.SkolemNodeContent;
-import semantic.graph.vetypes.TermNode;
-import semantic.graph.vetypes.TermNodeContent;
+import sem.graph.SemGraph;
+import sem.graph.SemJGraphT;
+import sem.graph.SemanticEdge;
+import sem.graph.SemanticGraph;
+import sem.graph.SemanticNode;
+import sem.graph.vetypes.ContextNode;
+import sem.graph.vetypes.ContextNodeContent;
+import sem.graph.vetypes.GraphLabels;
+import sem.graph.vetypes.RoleEdge;
+import sem.graph.vetypes.RoleEdgeContent;
+import sem.graph.vetypes.SkolemNode;
+import sem.graph.vetypes.SkolemNodeContent;
+import sem.graph.vetypes.TermNode;
+import sem.graph.vetypes.TermNodeContent;
 
 
 /**
@@ -32,11 +33,16 @@ import semantic.graph.vetypes.TermNodeContent;
  * @author kkalouli
  *
  */
-public class RolesMapper {
-	private semantic.graph.SemanticGraph graph;
+public class RolesMapper implements Serializable {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 8952920085814733709L;
+	private sem.graph.SemanticGraph graph;
 	private SemGraph depGraph;
 	// will need passive for the passive graphs
 	private boolean passive;
+	private boolean passivePerm;
 	// need it for verb coordination
 	private boolean verbCoord;
 	// need it for clausal coordination
@@ -60,13 +66,16 @@ public class RolesMapper {
 	// plain edges to be added to the role graph
 	private HashMap<String,SemanticEdge> edgesToAdd;
 	private ArrayList<SemanticEdge> edgesToRemove;
+	// boolean whether there was a subj found, otherwise it's imperative and the subj has to be added
+	private boolean foundSubj;
 	
 
 
-	public RolesMapper(semantic.graph.SemanticGraph graph,ArrayList<String> verbalForms,  ArrayList<String> nounForms ){
+	public RolesMapper(sem.graph.SemanticGraph graph,ArrayList<String> verbalForms,  ArrayList<String> nounForms ){
 		this.graph = graph;
 		this.depGraph = graph.getDependencyGraph();
 		passive = false;
+		passivePerm = false;
 		verbCoord = false;
 		clausalCoord = false;
 		coord = false;
@@ -118,8 +127,10 @@ public class RolesMapper {
 				integrateCoordinatingRoles(start, finish, edge, edgeLabel);
 				verbCoord = false;
 				coord = false;
-				if (edge.getLabel().contains("pass"))
+				if (edge.getLabel().contains("pass")){
 					passive = true;
+					passivePerm = true;
+				}
 			}
 			
 			// after dealing with coordination, add all the roles of the plain edges to the role graph		
@@ -141,8 +152,10 @@ public class RolesMapper {
 			passive = false;
 			clausalCoord = false;		
 		}
-		// make sure that the role graph is non-empty in the case of an imperative with you. If empty, fill it in.
-		/*if (graph.getRoleGraph().getNodes().isEmpty()){
+		// make sure that the role graph has a subject in the case of an imperative verb .
+		// first case: role graph is completely empty (intransitive imperative)
+		// second case: only asubject is missing (transitive imperative)
+		if ((graph.getRoleGraph().getNodes().isEmpty() || foundSubj == false) && passivePerm == true){
 			RoleEdge roleEdge = new RoleEdge(GraphLabels.SUBJ, new RoleEdgeContent());
 			SkolemNodeContent subjNodeContent = new SkolemNodeContent();
 			subjNodeContent.setSurface("you");
@@ -153,14 +166,21 @@ public class RolesMapper {
 			subjNodeContent.setDerived(false);
 			subjNodeContent.setSkolem(subjNodeContent.getStem()+"_0");
 			SkolemNode subjNode = new SkolemNode(subjNodeContent.getSkolem(), subjNodeContent);
-			
-			graph.addRoleEdge(roleEdge, graph.getRootNode(), subjNode);
+			// set the top node to the root node of the graph unless the role graph os not empty
+			SemanticNode<?> topNode = graph.getRootNode();
+			// if the role graph is not empty, find what is the actual top node 
+			for (SemanticNode<?> roleN : graph.getRoleGraph().getNodes()){
+				if (graph.getRoleGraph().getInEdges(roleN).isEmpty())
+					topNode = roleN;				
+			}
+			// add the subject to the top node, whichever that is.
+			graph.addRoleEdge(roleEdge, topNode, subjNode);
 			if (graph.getRootNode() instanceof SkolemNode && subjNode instanceof SkolemNode){
 				// at this point set the contexts of all words that get involved to the role graph. the context is top at the moment 
 				((SkolemNodeContent) graph.getRootNode().getContent()).setContext("top");
 				((SkolemNodeContent) subjNode.getContent()).setContext("top");
 			}
-		}*/
+		}
 		
 		checkForMoreThanDoubleCoordination();
 		checkForNone();
@@ -242,6 +262,9 @@ public class RolesMapper {
 	private void integratePlainEdges(){
 		// list that holds all edges that have been added already
 		ArrayList<SemanticEdge> traversed = new ArrayList<SemanticEdge>();
+		// check if there are no edges at all: imperative intransitive verb
+		if (edgesToAdd.isEmpty())
+			return;
 		// go through the edges of egdesToAdd and only add those that are not contained in the combEdges and that are not already traversed
 		for (SemanticEdge edge: edgesToAdd.values()){
 			if (combEdges.contains(edge))
@@ -316,7 +339,7 @@ public class RolesMapper {
 	 * @return
 	 */
 	private SemGraph createSubgraph(SemanticNode<?> node, SemanticNode<?> nodeToExclude, Set<SemanticEdge> listOfSubEdges, Set<SemanticNode<?>> listOfSubNodes){
-		graph.displayDependencies();
+		//graph.displayDependencies();
 		// got through all children edges of the specified node
 		for (SemanticEdge subEdge : graph.getOutEdges(node)){	
 			// if the edge finishes with the nodeToEclude, move on
@@ -541,41 +564,45 @@ public class RolesMapper {
 		break;
 		// only add it when the verb coord is false; when true, it will be added later
 		case "nsubj" : role = GraphLabels.SUBJ;
+			foundSubj = true;
 		break;
 		case "auxpass" : passive = true;
 		break;
-		// only add it when the verb coord is false; when true, it will be added later
 		case "nsubjpass" : role = GraphLabels.OBJ;
 		passive = true;
+		foundSubj = true;
 		break;
 		case "nsubjpass:xsubj" : role = GraphLabels.OBJ;
 		passive = true;
+		foundSubj = true;
 		break;
-		// only add it when the verb coord is false; when true, it will be added later
 		case "csubj" : role = GraphLabels.SUBJ;
+		foundSubj = true;
 		break;
-		// only add it when the verb coord is false; when true, it will be added later
 		case "csubjpass" : role = GraphLabels.OBJ;	
 		passive = true;
+		foundSubj = true;
 		break;
 		case "nmod:agent" : if (passive == true){ 
 			role = GraphLabels.SUBJ;
+			foundSubj = true;
 		}	
 		break;
 		case "nmod:by" : if (passive == true){ 
 			role = GraphLabels.SUBJ;
+			foundSubj = true;
 		}	
 		break;
-		// only add it when the verb coord is false; when true, it will be added later
 		case "nsubj:xsubj": role = GraphLabels.SUBJ;
+		foundSubj = true;
 		break;
 		case "amod": boolean found = false;
 		// if the word is already included in the property graph as a specifier (e.g. many, few, etc) dont add it here again
 			for (SemanticEdge out : graph.getPropertyGraph().getOutEdges(start)){
-							if (out.getLabel().equals("specifier") && finish.getLabel().contains(out.getDestVertexId())){
-								found = true;						
-							}
-					}
+				if (out.getLabel().equals("specifier") && finish.getLabel().contains(out.getDestVertexId())){
+					found = true;						
+				}
+			}
 			if (found == false)
 				role = GraphLabels.AMOD;
 		break;
@@ -583,13 +610,16 @@ public class RolesMapper {
 		break;
 		case "acl:relcl": role = GraphLabels.RESTRICTION;
 		break;
-		case "compound":role = GraphLabels.RESTRICTION;
+		case "compound":role = GraphLabels.COMPOUND;
 		break;
-		case "appos":role = GraphLabels.RESTRICTION;
+		case "dep": role = GraphLabels.MOD;
+		break;
+		// dont know yet if they should be in there, appos is treated in the DepGraphToSemGraph as part of the LinkGraph
+		/*case "appos":role = GraphLabels.RESTRICTION;
 		break;
 		case "case" : if (passive == false){
 			role = GraphLabels.PMOD;
-			}
+			}*/
 		}
 		// nmod can have difefrent subtypes, therefore it is put here and not within the switch 
 		if (role.equals("") && edgeLabel.contains("nmod")){

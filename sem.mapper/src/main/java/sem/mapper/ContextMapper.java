@@ -5,7 +5,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -15,24 +17,29 @@ import java.util.Scanner;
 import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import sem.graph.EdgeContent;
+import sem.graph.SemGraph;
+import sem.graph.SemanticEdge;
+import sem.graph.SemanticGraph;
+import sem.graph.SemanticNode;
+import sem.graph.vetypes.ContextHeadEdge;
+import sem.graph.vetypes.ContextNode;
+import sem.graph.vetypes.ContextNodeContent;
+import sem.graph.vetypes.GraphLabels;
+import sem.graph.vetypes.RoleEdge;
+import sem.graph.vetypes.RoleEdgeContent;
+import sem.graph.vetypes.SkolemNode;
+import sem.graph.vetypes.SkolemNodeContent;
+
 import java.util.Set;
 
-import semantic.graph.EdgeContent;
-import semantic.graph.SemGraph;
-import semantic.graph.SemanticEdge;
-import semantic.graph.SemanticGraph;
-import semantic.graph.SemanticNode;
-import semantic.graph.vetypes.ContextHeadEdge;
-import semantic.graph.vetypes.ContextNode;
-import semantic.graph.vetypes.ContextNodeContent;
-import semantic.graph.vetypes.GraphLabels;
-import semantic.graph.vetypes.RoleEdge;
-import semantic.graph.vetypes.RoleEdgeContent;
-import semantic.graph.vetypes.SkolemNode;
-import semantic.graph.vetypes.SkolemNodeContent;
-
-public class ContextMapper {
-	private semantic.graph.SemanticGraph graph;
+public class ContextMapper implements Serializable {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -6755671877667960628L;
+	private sem.graph.SemanticGraph graph;
 	private SemGraph depGraph;
 	private HashMap<SemanticNode<?>,SemanticNode<?>> negCtxs;
 	private HashMap<SemanticNode<?>,String> coordCtxs;
@@ -43,8 +50,9 @@ public class ContextMapper {
 	private HashMap<SemanticNode<?>,String> implCtxs;
 	private HashMap<String,String> mapOfImpl;
 	private ArrayList<String> verbalForms;
+	private ArrayList<SemanticNode<?>> traversedNeighbors;
 	
-	public ContextMapper(semantic.graph.SemanticGraph graph, ArrayList<String> verbalForms){
+	public ContextMapper(sem.graph.SemanticGraph graph, ArrayList<String> verbalForms){
 		this.verbalForms = verbalForms;
 		this.graph = graph;
 		this.depGraph = this.graph.getDependencyGraph();
@@ -54,15 +62,16 @@ public class ContextMapper {
 		this.verbCoord = false;
 		this.disjunction = false;
 		this.implCtxs = new HashMap<SemanticNode<?>,String>();
+		this.traversedNeighbors = new ArrayList<SemanticNode<?>>();
 		
 		// read the file with the implicative/factive signatures
 		BufferedReader br = null;
 		try {
-			br = new BufferedReader(new InputStreamReader(new FileInputStream("implicatives3.txt"), "UTF-8"));
+			ClassLoader classLoader = getClass().getClassLoader();
+			InputStream implFile = getClass().getClassLoader().getResourceAsStream("implicatives3.txt");
+			//File implFile = new File(classLoader.getResource("implicatives3.txt").getFile());
+			br = new BufferedReader(new InputStreamReader(implFile, "UTF-8"));
 		} catch (UnsupportedEncodingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
@@ -93,15 +102,11 @@ public class ContextMapper {
 	 * @throws IOException 
 	 */
 	public void integrateAllContexts(){
-		try {
-			integrateImplicativeContexts();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		integrateImplicativeContexts();
 		integrateCoordinatingContexts();
 		integrateNegativeContexts();
 		integrateModalContexts();
+		//graph.displayContexts();
 		if (coord == false)
 			checkForPostIntegrationMistakes();
 		SemGraph conGraph = graph.getContextGraph();	
@@ -133,10 +138,13 @@ public class ContextMapper {
 			}
 
 		}		
-		// if the conGraph does not have any ndoes up until now, add the predNode as ctx
+		// if the conGraph does not have any nodes up until now, add the predNode as ctx
 		if (conGraph.getNodes().isEmpty() && predNode != null){
 			addSelfContextNodeAndEdgeToGraph(predNode);
 		}
+		
+		integrateImperativeContexts();
+		integrateInterrogativeContexts();
 		// make sure that the context graph is left with one top context; if there are more than one "tops", then
 		//merge the two tops to one
 		int noOfTops = 0;
@@ -174,20 +182,23 @@ public class ContextMapper {
 	 * In such cases there are still two top contexts involved: the top context of the implicative verb and the top context of the 
 	 * negated verb. Thus, the negated context has to be embedded into the implicative context. 
 	 * Case 2: there is an implicative verb with negation. In these cases an extra node has been added, called "negation". This node is only "storing" what is the
-	 * instantiability relation of the child to the negated context because this relation needs to be added at the end. This node gets deleted then.
+	 * instantiability relation of the child to the negated context because this relation needs to be added at the end. This node gets deleted then. not used now:
+	 * only use if we want to add the direct relation of the child of the implicative to the negated node.
 	 */
 	private void checkForPostIntegrationMistakes(){
 		// Case 1
 		HashMap<String, SemanticNode<?>> nodeLabels = new HashMap<String, SemanticNode<?>>();
-		ArrayList<SemanticNode<?>> sameNodes = new ArrayList<SemanticNode<?>>();	
+		ArrayList<ArrayList<SemanticNode<?>>> sameNodes = new ArrayList<ArrayList<SemanticNode<?>>>();	
 		// find any ctx nodes that are exactly the same because those are going to be merged into one
 		for (SemanticNode<?> cNode: graph.getContextGraph().getNodes()){
 			if (!nodeLabels.containsKey(cNode.getLabel())){
 				nodeLabels.put(cNode.getLabel(), cNode);
 			}
 			else {
-				sameNodes.add(cNode);
-				sameNodes.add(nodeLabels.get(cNode.getLabel()));
+				ArrayList<SemanticNode<?>> listOfSame = new ArrayList<SemanticNode<?>>();
+				listOfSame.add(cNode);
+				listOfSame.add(nodeLabels.get(cNode.getLabel()));
+				sameNodes.add(listOfSame);
 			}
 		}
 		// initialize the nodes and edges that are going to be added
@@ -196,45 +207,58 @@ public class ContextMapper {
 		SemanticNode<?> nodeToEmbed = null;
 		ArrayList<SemanticNode<?>> nodesToRemove = new ArrayList<SemanticNode<?>>();
 		ArrayList<SemanticEdge> edgesToRemove = new ArrayList<SemanticEdge>();
+		HashMap<SemanticNode<?>,ArrayList<String>> mapWithNegations = new HashMap<SemanticNode<?>,ArrayList<String>>();
 		if (sameNodes.isEmpty())
 			return;
-		// go through the same nodes
-		for (SemanticNode<?> node : sameNodes){
-			// find the context in which they belong
-			if (graph.getContextGraph().getInNeighbors(node).isEmpty()){
-				nodeToEmbed = node;
-				continue;
-			}
-			SemanticNode<?> ctx = graph.getContextGraph().getInNeighbors(node).iterator().next();
-			SemanticNode<?> ctxHead = null;
-			// get the head of the context they belong
-			for (SemanticEdge out : graph.getContextGraph().getOutEdges(ctx)){
-				if (out.getLabel().equals("ctx_hd"))
-					ctxHead = graph.getFinishNode(out);
-			}	
-			// if this head is implicative, then this is the head to be taken as the top context (and the other one will be embedded into that)
-			if (implCtxs.containsKey(ctxHead) || ctxHead.getLabel().contains("not_") ){
-				top = ctx;
-				connector = graph.getContextGraph().getEdges(ctx,node).iterator().next();
-				// do not put the head node of this node to the nodesToRemove
-				for (SemanticEdge out : graph.getContextGraph().getOutEdges(node)){
-					if (out.getLabel().equals("ctx_hd"))
+		// go through each list of same nodes and keep one of the nodes
+		for (ArrayList<SemanticNode<?>> listOfSame : sameNodes){
+			for (SemanticNode<?> node : listOfSame){
+				// find the context in which it belongs
+				if (graph.getContextGraph().getInNeighbors(node).isEmpty()){
+					nodeToEmbed = node;
+					continue;
+				}
+				Set<SemanticNode<?>> ctxs = graph.getContextGraph().getInNeighbors(node);
+				for (SemanticNode<?> ctx : ctxs){
+					if (ctx.getLabel().equals("negation")){
+						String edgeLabel = graph.getContextGraph().getEdges(ctx,node).iterator().next().getLabel();
+						ArrayList<String> edgeAndFinishNode = new ArrayList<String>();	
+						edgeAndFinishNode.add(edgeLabel);
+						edgeAndFinishNode.add(node.getLabel());
+						mapWithNegations.put(ctx, edgeAndFinishNode);
 						continue;
-					else
-						nodesToRemove.add(graph.getFinishNode(out));
-				}			
-				edgesToRemove.addAll(graph.getContextGraph().getOutEdges(node));
-				nodesToRemove.add(node);
-				edgesToRemove.add(connector);
-			// if it's not implicative, then it's gonna be the one to be embedded
-			} else {
-				nodeToEmbed = ctx;
-			}		
+					}
+					SemanticNode<?> ctxHead = null;
+					// get the head of the context they belong
+					for (SemanticEdge out : graph.getContextGraph().getOutEdges(ctx)){
+						if (out.getLabel().equals("ctx_hd"))
+							ctxHead = graph.getFinishNode(out);
+					}	
+					// if this head is implicative, then this is the head to be taken as the top context (and the other one will be embedded into that)
+					if (implCtxs.containsKey(ctxHead) || ctxHead.getLabel().contains("not_") ){
+						top = ctx;
+						connector = graph.getContextGraph().getEdges(ctx,node).iterator().next();
+						// do not put the head node of this node to the nodesToRemove
+						for (SemanticEdge out : graph.getContextGraph().getOutEdges(node)){
+							if (out.getLabel().equals("ctx_hd"))
+								continue;
+							else
+								nodesToRemove.add(graph.getFinishNode(out));
+						}			
+						edgesToRemove.addAll(graph.getContextGraph().getOutEdges(node));
+						nodesToRemove.add(node);
+						edgesToRemove.add(connector);
+					// if it's not implicative, then it's gonna be the one to be embedded
+					// if it is, then the next node to be traversed will give the nodeToEmbed
+					} else {
+						nodeToEmbed = ctx;
+					}
+				}
+			}
+			// add the new edge between top and nodeToEmbed (one edge is added per pair of same nodes)
+			ContextHeadEdge ctxEdge = new ContextHeadEdge(connector.getLabel(), new RoleEdgeContent());
+			graph.addContextEdge(ctxEdge, top, nodeToEmbed);		
 		}
-		// add the new edge between top and nodeToEmbed
-		ContextHeadEdge ctxEdge = new ContextHeadEdge(connector.getLabel(), new RoleEdgeContent());
-		graph.addContextEdge(ctxEdge, top, nodeToEmbed);
-		
 		// remove all things to remove
 		for (SemanticNode<?> n:  nodesToRemove){
 			graph.removeContextNode(n);
@@ -243,8 +267,21 @@ public class ContextMapper {
 			graph.removeContextEdge(e);
 		}
 		
+		// add [negation] nodes to the correct nodes that have remained: comment out for now: might not need it
+		/*for (SemanticNode<?> negNode : mapWithNegations.keySet()){
+			ArrayList<String> value = mapWithNegations.get(negNode);
+			String edge = value.get(0);
+			String finishNodeString = value.get(1);
+			// have to create a new edge with this edge label because the other one has already been removed
+			ContextHeadEdge newCtxEdge = new ContextHeadEdge(edge, new RoleEdgeContent());
+			// have to find the node that is still in the graph and has the same name as the finishNode
+			SemanticNode<?> finish = nodeLabels.get(finishNodeString); 
+			graph.addContextEdge(newCtxEdge, negNode, finish);	
+		}*/
+		
 		// Case 2
 		SemanticNode<?> toRemove = null;
+		//graph.displayContexts();
 		for (SemanticNode<?> n : graph.getContextGraph().getNodes()){
 			// check if there is a node called negation: this node comes with implicative contexts and the edge between this node and its child
 			// is the instatiability relation of that child node in the top context
@@ -269,6 +306,87 @@ public class ContextMapper {
 		// remove the negation node
 		graph.removeContextNode(toRemove);
 	}
+	
+	/**
+	 * Integrates imperative contexts if they exist. 
+	 */
+	private void integrateImperativeContexts(){
+		SemGraph roleGraph = graph.getRoleGraph();
+		Set<SemanticEdge> edges = roleGraph.getEdges();
+		SemGraph conGraph = graph.getContextGraph();
+		SemanticNode<?> topNode = null;
+		for (SemanticEdge edge : edges){
+			// see if thre is a subject in the role graph with the label you_0 (means it is the subj of an imperative verb)
+			if (edge.getLabel().equals("sem_subj") && graph.getRoleGraph().getEndNode(edge).getLabel().contains("you_0")){
+				// find ot what is the top node of the context graph
+				for (SemanticNode<?> ctxN : conGraph.getNodes()){
+					if (conGraph.getInEdges(ctxN).isEmpty()){
+						topNode = ctxN;
+					}
+				}
+			}
+			// hang an imperative context on top of the until now top context. 
+			ContextHeadEdge impEdge = new ContextHeadEdge(GraphLabels.IMPERATIVE, new  RoleEdgeContent());
+			SemanticNode<?> start = new ContextNode("ctx(imperative)", new ContextNodeContent());
+			graph.addContextEdge(impEdge, start, topNode);
+		}
+	}
+	
+	/**
+	 * Integrates interrogative contexts if they exist. 
+	 */
+	private void integrateInterrogativeContexts(){
+		//list of verbs that introduce indirect questions (TODO: expand list)
+		ArrayList<String> interrVerbs = new ArrayList<String>();
+		interrVerbs.add("ask");
+		interrVerbs.add("wonder");
+		interrVerbs.add("inquire");
+		interrVerbs.add("query");
+		SemanticNode<?> ctxFinish = null;
+		SemanticNode<?> ctxStart = null;
+		SemGraph conGraph = graph.getContextGraph();
+		SemGraph roleGraph = graph.getRoleGraph();
+		Set<SemanticNode<?>> rNodes = roleGraph.getNodes();
+		// go through the role graph and see if there is one of the interrogative verbs
+		// check this only if the interrogative var is set to false: if it is already true, it means there is a direct question and we dont need this step 
+		for (SemanticNode<?> rNode : rNodes){
+			SemanticNode<?> child = null;
+			if (rNode instanceof SkolemNode && DepGraphToSemanticGraph.interrogative == false && interrVerbs.contains(((SkolemNodeContent) rNode.getContent()).getStem())){
+				Set<SemanticEdge> childrenEdges = roleGraph.getOutEdges(rNode);
+				// get the children of that node: the sem_comp child is the one that is in the interrogative context 
+				for (SemanticEdge e : childrenEdges){
+					if (e.getLabel().equals("sem_comp")){
+						child = graph.getFinishNode(e);
+					}
+				}
+				// add the self ctx of the child only if it doesnt already exist
+				if (!conGraph.getNodes().contains(child))
+					ctxFinish = addSelfContextNodeAndEdgeToGraph(child);
+				else
+					ctxFinish = conGraph.getInNeighbors(child).iterator().next(); // othwerise, get the existing one
+				// add the self node of the start
+				ctxStart = addSelfContextNodeAndEdgeToGraph(rNode);
+				DepGraphToSemanticGraph.interrogative = true;
+			}
+		}
+		// do the following if the interrogative var is set to true
+		if (DepGraphToSemanticGraph.interrogative == true){
+			// if the above hasnt been executed, then we have a direct question and we still need to figure out the interrogative ctx
+			if (ctxFinish == null){
+				for (SemanticNode<?> ctxN : conGraph.getNodes()){
+					if (conGraph.getInEdges(ctxN).isEmpty()){
+						ctxFinish = ctxN;
+					}
+				}
+			}
+			// add an interrogative context 
+			ContextHeadEdge interEdge = new ContextHeadEdge(GraphLabels.INTERROGATIVE, new  RoleEdgeContent());
+			if (ctxStart == null)
+				ctxStart = new ContextNode("ctx(interrogative)", new ContextNodeContent());
+			graph.addContextEdge(interEdge, ctxStart, ctxFinish);
+		}
+	}
+	
 
 	/**
 	 * Integrates any modal contexts of the sentence. 
@@ -481,7 +599,7 @@ public class ContextMapper {
 		if (head instanceof SkolemNode)
 			((SkolemNodeContent) head.getContent()).setContext(ctxHead.getLabel());
 		setContextsRecursively(head, head);
-		graph.displayContexts();
+		//graph.displayContexts();
 	}
 	
 	/**
@@ -803,20 +921,26 @@ public class ContextMapper {
 	}
 
 	/**
-	 * Recursively sets the contexts of the children of the given parent node
+	 * Recursively sets the contexts of the children of the given parent node.
+	 * Keeps track of the neighbors that have been travsesed to avoid an infinite loop where there is a relative clause and thus
+	 * a cycle in the graph
 	 * @param firstParent: the same as the parent of the 1st iteration. Then, the firstParent remains the same so that the context is always the same. 
 	 * @param parent
 	 */
 	private void setContextsRecursively(SemanticNode<?> firstParent, SemanticNode<?> parent){
-		Set<SemanticNode<?>> outNeighbors = graph.getRoleGraph().getOutNeighbors(parent);
+		Set<SemanticNode<?>> outNeighbors = graph.getRoleGraph().getOutNeighbors(parent);		
 		if (!outNeighbors.isEmpty()){
 			for (SemanticNode<?> neighbor: outNeighbors){
+				if (traversedNeighbors.contains(neighbor))
+					continue;
 				if (neighbor instanceof SkolemNode){
 					if (!graph.getContextGraph().containsNode(neighbor) && verbalForms.contains(((SkolemNodeContent) neighbor.getContent()).getPosTag()) ) {
 						((SkolemNodeContent) neighbor.getContent()).setContext(graph.getContextGraph().getInNeighbors(firstParent).iterator().next().getLabel());
 					}
 				}
+				traversedNeighbors.add(neighbor);
 				setContextsRecursively(firstParent,neighbor);
+				
 			}
 		}
 	}
@@ -986,7 +1110,7 @@ public class ContextMapper {
 	 * The signatures of the words are looked up from a text file. 
 	 * @throws IOException
 	 */
-	private void integrateImplicativeContexts() throws IOException{
+	private void integrateImplicativeContexts(){
 		//go through each node of the role graph and see if it is such a word
 		for (SemanticNode<?> node : graph.getRoleGraph().getNodes()){
 			if (!(node instanceof SkolemNode))
@@ -1030,10 +1154,11 @@ public class ContextMapper {
 			// get the truth condition of that stem+comple from the hash: take the positive truth condition even if it's a negated context for now 
 			String truth = mapOfImpl.get(stem+comple).split("_")[0];
 			ContextNode negation = null;
-			// if there is negation create a new node which will be added to the graph to hold the truth condition of the negation
-			if (isNeg == true){
+			// if there is negation create a new node which will be added to the graph to hold the truth condition of the negation: comment out for now: might not need it
+			// this adds the instantiability of the child of the implicative to the parent of the implicative, i.e. the negation in this case
+			/*if (isNeg == true){
 				negation = new ContextNode("negation", new ContextNodeContent());
-			} 
+			} */
 			// put the node into the hash with the implicatives
 			implCtxs.put(node, "impl");
 			ContextHeadEdge labelEdge = getEdgeLabelAccordingToTruthCondition(truth);
@@ -1072,9 +1197,10 @@ public class ContextMapper {
 						}
 					}
 				}	
-			}	
+			}
 		}
 	}
+	
 	
 	/***
 	 * Depending on the polarity value given (N, P, U), create the correct edge
