@@ -1,4 +1,4 @@
-subprojects {
+allprojects {
     apply plugin: 'java'
     apply plugin: 'eclipse'
  
@@ -7,14 +7,17 @@ subprojects {
         jcenter()
         maven {
         url "https://mvnrepository.com/artifact/"
+   		}
     }
-    }
-    
-    
-    dependencies {
-    implementation 'com.google.guava:guava:21.0'
-}
-
-
+  
+  
+  	task fatJar(type: Jar) {
+    	manifest {
+        	attributes 'Main-Class':'gnli.InferenceComputer'
+    	}
+   		baseName = project.name + '-all'
+    	from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    	with jar
+	}
 
 }
