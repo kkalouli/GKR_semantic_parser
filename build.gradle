@@ -9,15 +9,5 @@ allprojects {
         url "https://mvnrepository.com/artifact/"
    		}
     }
-  
-  
-  	task fatJar(type: Jar) {
-    	manifest {
-        	attributes 'Main-Class':'gnli.InferenceComputer'
-    	}
-   		baseName = project.name + '-all'
-    	from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
-    	with jar
-	}
-
+ 
 }
