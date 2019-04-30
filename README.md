@@ -18,7 +18,7 @@ Copyright 2018 Aikaterini-Lida Kalouli and Richard Crouch. GKR is a free-softwar
 
 # Installation 
 
-(this installation assumes you have a Java runtime environment (version 8 or higher, ) and the Gradle Build tool (<https://gradle.org/>) in place. If not, please make sure to install those first)
+(this installation assumes you have a Java runtime environment (version 8 or higher, <https://www.oracle.com/technetwork/java/javase/downloads/jre8-downloads-2133155.html> ) and the Gradle Build tool (<https://gradle.org/>) in place. If not, please make sure to install those first)
 
 1. Clone the repository into your desired directory: ``` git clone https://github.com/kkalouli/GKR_semantic_parser.git ```
 
