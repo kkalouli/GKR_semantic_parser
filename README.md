@@ -14,7 +14,7 @@ software in any other medium serving scientists or students (e.g. web-sites,
 CD-ROMs) please include the above citation.
 
 # License
-Copyright 2018 Aikaterini-Lida Kalouli and Richard Crouch. GKR is a free-software discributed under the Apache License 2.0. 
+Copyright 2018 Aikaterini-Lida Kalouli and Richard Crouch. GKR is a free-software discributed under the conditions of the Apache License 2.0, without warranty. See LICENSE file for more details. You should have received a copy of the LICENSE file with the source code. If not, please visit http://www.apache.org/licenses/ for more information. 
 
 # Installation 
 
@@ -80,9 +80,12 @@ In the subproject sem.mapper there is a class named DepGraphToSemanticGraph.
 In the main method at the end of this class you can choose to run only one sentence or a testsuite with sentences: just comment in or
 out the corresponding method. The testsuite should contain one sentence per line.
 
+# Contact
+For troubleshooting, comments, ideas and discussions, please contact aikaterini-lida.kalouli(at)uni-konstanz.de or dick.crouch(at)gmail.com
 
 
 
 
-See LICENSE file for more details.
+
+
 
