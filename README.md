@@ -1,4 +1,4 @@
-# GKR_semantic_parser
+# About
 
 This is the Graphical Knowledge Representation (GKR) parser. It transforms a given sentence into a layered semantic graph as described
 in *Kalouli, A.-L. and Richard Crouch. 2018. GKR: the Graphical Knowledge Representation for semantic parsing. In Proceedings of SEMBEaR 2018
@@ -13,8 +13,10 @@ If you use this software in writing scientific papers, or you use this
 software in any other medium serving scientists or students (e.g. web-sites,
 CD-ROMs) please include the above citation.
 
+# License
+Copyright 2018 Aikaterini-Lida Kalouli and Richard Crouch. GKR is a free-software discributed under the Apache License 2.0. 
 
-How to install and run the GKR parser: 
+# Installation 
 
 1. Clone the repository into your desired directory: ``` git clone https://github.com/kkalouli/GKR_semantic_parser.git ```
 
@@ -72,15 +74,15 @@ For Eclipse: import it as a gradle project
 
 
 
-How to test a sentence:
+# Usage
 
 In the subproject sem.mapper there is a class named DepGraphToSemanticGraph.
-In the main method at the end of this class you can run only one sentence or a testsuite with sentences: just comment in or
-out the corresponding method.
+In the main method at the end of this class you can choose to run only one sentence or a testsuite with sentences: just comment in or
+out the corresponding method. The testsuite should contain one sentence per line.
 
 
 
-Copyright 2018 Aikaterini-Lida Kalouli and Richard Crouch
+
 
 See LICENSE file for more details.
 
