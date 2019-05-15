@@ -1,4 +1,3 @@
-rootProject.name = 'project'
+rootProject.name = 'GKR_semantic_parser'
 include 'sem.graph'
 include 'sem.mapper'
-include 'gnli'
