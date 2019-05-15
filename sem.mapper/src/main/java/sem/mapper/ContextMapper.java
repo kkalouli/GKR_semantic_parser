@@ -183,7 +183,7 @@ public class ContextMapper implements Serializable {
 	 * negated verb. Thus, the negated context has to be embedded into the implicative context. 
 	 * Case 2: there is an implicative verb with negation. In these cases an extra node has been added, called "negation". This node is only "storing" what is the
 	 * instantiability relation of the child to the negated context because this relation needs to be added at the end. This node gets deleted then. not used now:
-	 * only use if we want to add the direct relation of the child of the implicative to the negated node.
+	 * only use if we want to add the direct relation of the child of the implicative to the negated node. (for now, case 2 is intergated in case 1, see below)
 	 */
 	private void checkForPostIntegrationMistakes(){
 		// Case 1
@@ -220,7 +220,7 @@ public class ContextMapper implements Serializable {
 				}
 				Set<SemanticNode<?>> ctxs = graph.getContextGraph().getInNeighbors(node);
 				for (SemanticNode<?> ctx : ctxs){
-					if (ctx.getLabel().equals("negation")){
+					if (ctx.getLabel().contains("negation")){
 						String edgeLabel = graph.getContextGraph().getEdges(ctx,node).iterator().next().getLabel();
 						ArrayList<String> edgeAndFinishNode = new ArrayList<String>();	
 						edgeAndFinishNode.add(edgeLabel);
@@ -234,8 +234,12 @@ public class ContextMapper implements Serializable {
 						if (out.getLabel().equals("ctx_hd"))
 							ctxHead = graph.getFinishNode(out);
 					}	
-					// if this head is implicative, then this is the head to be taken as the top context (and the other one will be embedded into that)
-					if (implCtxs.containsKey(ctxHead) || ctxHead.getLabel().contains("not_") ){
+					/* for case 1: if this head is implicative, then this is the head to be taken as the top context (and the other one will be embedded into that)
+					/ for case 2: if this head is the "not_" node and the current node is not an implicative, then this is the head to be taken as the top context 
+					(it is not enough that the head is the "not_" node because "not_" is also the node when the embedded verb of the implicative is negated, so
+					we have to make sure that this is case 2, where the implicative itself is negated)
+					*/
+					if (implCtxs.containsKey(ctxHead)  || (implCtxs.containsKey(graph.getContextGraph().getOutNeighbors(node).iterator().next()) && ctxHead.getLabel().contains("not_"))){
 						top = ctx;
 						connector = graph.getContextGraph().getEdges(ctx,node).iterator().next();
 						// do not put the head node of this node to the nodesToRemove
@@ -279,7 +283,7 @@ public class ContextMapper implements Serializable {
 			graph.addContextEdge(newCtxEdge, negNode, finish);	
 		}*/
 		
-		// Case 2
+		// Case 2: not used for now because no "negation" node is added
 		SemanticNode<?> toRemove = null;
 		//graph.displayContexts();
 		for (SemanticNode<?> n : graph.getContextGraph().getNodes()){
@@ -306,6 +310,7 @@ public class ContextMapper implements Serializable {
 		// remove the negation node
 		graph.removeContextNode(toRemove);
 	}
+	
 	
 	/**
 	 * Integrates imperative contexts if they exist. 
@@ -1139,6 +1144,10 @@ public class ContextMapper implements Serializable {
 							comple = "_that";
 						} 
 					}
+					// there are cases where there is a comp but it is not introduced by that, e.g. Max believes John loves Mary.
+					if (!comple.equals("_that")){
+						comple = "_other";
+					}
 					break;
 				}
 				if (edge.getLabel().equals("sem_obj"))
@@ -1158,7 +1167,7 @@ public class ContextMapper implements Serializable {
 			// this adds the instantiability of the child of the implicative to the parent of the implicative, i.e. the negation in this case
 			/*if (isNeg == true){
 				negation = new ContextNode("negation", new ContextNodeContent());
-			} */
+			}*/
 			// put the node into the hash with the implicatives
 			implCtxs.put(node, "impl");
 			ContextHeadEdge labelEdge = getEdgeLabelAccordingToTruthCondition(truth);
@@ -1200,6 +1209,7 @@ public class ContextMapper implements Serializable {
 			}
 		}
 	}
+
 	
 	
 	/***
