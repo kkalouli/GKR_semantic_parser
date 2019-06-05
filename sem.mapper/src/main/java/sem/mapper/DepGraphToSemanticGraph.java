@@ -26,6 +26,8 @@ import java.util.Stack;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.imageio.ImageIO;
+
 import edu.stanford.nlp.coref.data.CorefChain;
 import edu.stanford.nlp.coref.data.CorefChain.CorefMention;
 import edu.stanford.nlp.ling.IndexedWord;
@@ -634,8 +636,13 @@ public class DepGraphToSemanticGraph implements Serializable {
 	/***
 	 * Process a single sentence with GKR. 
 	 * You can comment in or out the subgraphs that you want to have displayed.
+	 * @throws IOException 
 	 */
-	public void processSentence(String sentence, String wholeCtx) throws FileNotFoundException, UnsupportedEncodingException{
+	public sem.graph.SemanticGraph processSentence(String sentence, String wholeCtx) throws IOException{
+		if (!sentence.endsWith("."))
+			sentence = sentence+".";
+		if (!wholeCtx.endsWith("."))
+			wholeCtx = wholeCtx+".";
 		sem.graph.SemanticGraph graph = this.sentenceToGraph(sentence, wholeCtx);
 		graph.displayDependencies();
 		graph.displayProperties();
@@ -646,10 +653,12 @@ public class DepGraphToSemanticGraph implements Serializable {
 		//graph.nonLexicalDisplay();
 		graph.generalDisplay();
 		graph.display();
+		/*ImageIO.write(graph.saveRolesAsImage(),"png", new File("/Users/kkalouli/Desktop/roles.png"));*/
 		System.out.println(graph.displayAsString());
 		for (SemanticNode<?> node : graph.getDependencyGraph().getNodes()){
 				System.out.println(node.getLabel()+((SkolemNodeContent) node.getContent()).getContext());
 		}
+		return graph;
 	}
 	
 	
@@ -673,13 +682,14 @@ public class DepGraphToSemanticGraph implements Serializable {
 			} 
 			return semanticGraphs;
 	}
+	
 
 
 	public static void main(String args[]) throws IOException {
 		DepGraphToSemanticGraph semConverter = new DepGraphToSemanticGraph();
 		//semConverter.deserializeFileWithComputedPairs("/Users/kkalouli/Documents/Stanford/comp_sem/forDiss/test.txt");
 		//semConverter.processTestsuite("/Users/kkalouli/Documents/Stanford/comp_sem/forDiss/test.txt");
-		String sentence = "the man with a beard does shout loudly, whereas the woman in the black shirt does not shout loudly.";//"A family is watching a little boy who is hitting a baseball.";
+		String sentence = "Negotiations might prevent the strike.";//"A family is watching a little boy who is hitting a baseball.";
 		String context = "A boy is walking.";
 		semConverter.processSentence(sentence, sentence+" "+context);	
 	}
