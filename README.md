@@ -13,6 +13,9 @@ If you use this software in writing scientific papers, or you use this
 software in any other medium serving scientists or students (e.g. web-sites,
 CD-ROMs) please include the above citation.
 
+# Demo
+If you would like to have a quick sense of how GKR looks like, check out our online demo: http://lap0973.sprachwiss.uni-konstanz.de:8080/sem.mapper/
+
 # License
 Copyright 2018 Aikaterini-Lida Kalouli and Richard Crouch. GKR is a free-software discributed under the conditions of the Apache License 2.0, without warranty. See LICENSE file for more details. You should have received a copy of the LICENSE file with the source code. If not, please visit http://www.apache.org/licenses/ for more information. 
 
