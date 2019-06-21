@@ -12,6 +12,7 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Map.Entry;
@@ -31,6 +32,7 @@ import sem.graph.vetypes.RoleEdge;
 import sem.graph.vetypes.RoleEdgeContent;
 import sem.graph.vetypes.SkolemNode;
 import sem.graph.vetypes.SkolemNodeContent;
+import sem.graph.vetypes.TermNode;
 
 import java.util.Set;
 
@@ -115,6 +117,7 @@ public class ContextMapper implements Serializable {
 	 */
 	public void integrateAllContexts(){
 		integrateImplicativeContexts();
+		//graph.displayContexts();
 		integrateCoordinatingContexts();
 		//graph.displayContexts();
 		integrateNegativeContexts();
@@ -187,7 +190,7 @@ public class ContextMapper implements Serializable {
 			graph.removeContextNode(top);
 		}
 		
-		graph.displayContexts();
+		//graph.displayContexts();
 			
 	}
 	
@@ -1182,13 +1185,24 @@ public class ContextMapper implements Serializable {
 			SemanticNode<?> ctxOfImpl = addSelfContextNodeAndEdgeToGraph(node);
 			Set<SemanticNode<?>>children = graph.getRoleGraph().getOutNeighbors(node);
 			boolean foundComplAsChild = false;
-			for (SemanticNode<?> child : children){
-				if (child instanceof SkolemNode){
+			for (SemanticNode<?> child : children ){
+				// also include termNodes (merged nodes of coordinated  tokens)
+				if (child instanceof SkolemNode|| child instanceof TermNode){
 					SemanticEdge edgeToChild = graph.getRoleGraph().getEdges(node, child).iterator().next();
 					if (edgeToChild.getLabel().equals("sem_comp") || edgeToChild.getLabel().equals("sem_xcomp") ){
 						SemanticNode<?> ctxOfChild = addSelfContextNodeAndEdgeToGraph(child);
 						graph.addContextEdge(labelEdge,ctxOfImpl, ctxOfChild);
-						((SkolemNodeContent) child.getContent()).setContext(ctxOfImpl.getLabel());
+						if (child instanceof SkolemNode){
+							((SkolemNodeContent) child.getContent()).setContext(ctxOfImpl.getLabel());
+						} else {
+							// if it is a termNode, get its elements and set the context of them to the new context
+							List<SemanticNode<?>> outElements = graph.getOutNeighbors(child);
+							for (SemanticNode<?> elem : outElements){
+								if (elem instanceof SkolemNode) {
+									((SkolemNodeContent) elem.getContent()).setContext(ctxOfImpl.getLabel());
+								}
+							}
+						}	
 						foundComplAsChild = true;
 						// if there is negation, get the corresponding edge and add a node from the negation node to the current ctxOfChild
 						if (negation != null){
@@ -1200,11 +1214,22 @@ public class ContextMapper implements Serializable {
 			}
 			if (foundComplAsChild == false){
 				for (SemanticNode<?> child : children){
-					if (child instanceof SkolemNode){
+					// also include termNodes (merged nodes of coordinated  tokens)
+					if (child instanceof SkolemNode || child instanceof TermNode){
 						if (graph.getRoleGraph().getEdges(node, child).iterator().next().getLabel().equals("sem_obj")){
 							SemanticNode<?> ctxOfChild = addSelfContextNodeAndEdgeToGraph(child);
 							graph.addContextEdge(labelEdge,ctxOfImpl, ctxOfChild);
-							((SkolemNodeContent) child.getContent()).setContext(ctxOfImpl.getLabel());
+							if (child instanceof SkolemNode)
+								((SkolemNodeContent) child.getContent()).setContext(ctxOfImpl.getLabel());
+							else {
+								// if it is a termNode, get its elements and set the context of them to the new context
+								List<SemanticNode<?>> outElements = graph.getOutNeighbors(child);
+								for (SemanticNode<?> elem : outElements){
+									if (elem instanceof SkolemNode) {
+										((SkolemNodeContent) elem.getContent()).setContext(ctxOfImpl.getLabel());
+									}
+								}
+							}				
 							// if there is negation, get the corresponding edge and add a node from the negation node to the current ctxOfChild
 							if (negation != null){
 								labelEdge = getEdgeLabelAccordingToTruthCondition(mapOfImpl.get(stem+comple).split("_")[1]);

@@ -57,21 +57,21 @@ public class GraphLabels implements Serializable{
 	public static final String PRONOUN_RESOLUTION = "prounoun_res";
 	public static final String NAME_RESOLUTION = "name_res";
 	public static final String IDENTICAL_TO = "identical_to";
-	public static final String APPOSITIVE_IDENTICAL_TO = "appositive_identical_to";
+	public static final String APPOS_IDENTICAL_TO = "appos_identical_to";
 	
 	public static final Set<String> linkEdgeLabels = new HashSet<String>(Arrays.asList(new String[] {
-			PRONOUN_RESOLUTION, NAME_RESOLUTION, IDENTICAL_TO, APPOSITIVE_IDENTICAL_TO
+			PRONOUN_RESOLUTION, NAME_RESOLUTION, IDENTICAL_TO, APPOS_IDENTICAL_TO
 	}));
 	
 	
-	public static final String CARDINALITY = "cardinality";
+	public static final String CARDINAL = "cardinal";
 	public static final String SPECIFIER = "specifier";
 	public static final String TENSE = "tense";
 	public static final String ASPECT = "aspect";
 	public static final String PART_OF = "part_of";
 	public static final String NTYPE = "name";
 	public static final Set<String> propertyEdgeLabels = new HashSet<String>(Arrays.asList(new String[] {
-			CARDINALITY, SPECIFIER, TENSE, ASPECT, PART_OF, NTYPE
+			CARDINAL, SPECIFIER, TENSE, ASPECT, PART_OF, NTYPE
 	}));
 	
 	

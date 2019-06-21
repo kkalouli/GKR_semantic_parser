@@ -1,9 +1,11 @@
 package sem.graph;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -11,10 +13,24 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import javax.imageio.ImageIO;
+import javax.swing.JFrame;
+import javax.swing.JScrollPane;
+
 import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.Image;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.io.Serializable;
 
+import org.apache.commons.lang3.ArrayUtils;
+import org.jgrapht.Graph;
 import org.springframework.util.SerializationUtils;
+
+import com.mxgraph.view.mxGraph;
 
 import sem.graph.vetypes.ContextNode;
 import sem.graph.vetypes.GraphLabels;
@@ -35,7 +51,7 @@ import sem.graph.vetypes.ValueNode;
  * The class can be extended to include further graph layers
  *
  */
-public class SemanticGraph implements Serializable {
+public class SemanticGraph implements Serializable  {
 	/**
 	 * 
 	 */
@@ -442,221 +458,123 @@ public class SemanticGraph implements Serializable {
 		
 		}
 	}
-
-	/**
-	 * Open a window displaying the full graph
-	 */
-	public void display() {
-		this.graph.display();
-		
-	}
 	
-	/**
-	 * Open a window displaying the role graph
-	 */
+	
 	public void displayRoles() {
-		this.roleGraph.display();
+		 this.getRoleGraph().display();
 	}
 	
-	/**
-	 * Open a window displaying the context graph
-	 */
-	public void displayContexts() {
-		this.contextGraph.display();
-	}
-	
-	/**
-	 * Open a window displaying the property graph
-	 */
-	public void displayProperties() {
-		//this.propertyGraph.display();
-		Set<SemanticNode<?>> nodes = new HashSet<SemanticNode<?>>();
-		Set<SemanticEdge> edges = new HashSet<SemanticEdge>();
-		Map<Color, List<SemanticNode<?>>> nodeProperties = new HashMap<Color, List<SemanticNode<?>>>();
-		Map<Color, List<SemanticEdge>> edgeProperties = new HashMap<Color,List<SemanticEdge>>();
-		List<SemanticNode<?>> propertyNodes = new ArrayList<SemanticNode<?>>();
-		nodeProperties.put(Color.MAGENTA, propertyNodes);
-		List<SemanticEdge> propertyEdges = new ArrayList<SemanticEdge>();
-		edgeProperties.put(Color.MAGENTA, propertyEdges);
-		List<SemanticNode<?>> roleNodes = new ArrayList<SemanticNode<?>>();
-		nodeProperties.put(Color.BLUE, roleNodes);
-		List<SemanticEdge> roleEdges = new ArrayList<SemanticEdge>();
-		edgeProperties.put(Color.BLUE, roleEdges);
-		
-		for (SemanticNode<?> rNode : this.propertyGraph.getNodes()) {
-			nodes.add(rNode);
-			if (rNode instanceof ValueNode)
-				propertyNodes.add(rNode);
-			else if (rNode instanceof SkolemNode)
-				roleNodes.add(rNode);
-		}
-		for (SemanticEdge rEdge : this.propertyGraph.getEdges()) {
-			edges.add(rEdge);
-			if (rEdge instanceof PropertyEdge)
-				propertyEdges.add(rEdge);
-			else if (rEdge instanceof RoleEdge)
-				roleEdges.add(rEdge);
-		}
-		
-		SemGraph subGraph = this.graph.getSubGraph(nodes, edges);
-		subGraph.display(nodeProperties, edgeProperties);
-	}
-
-	/**
-	 * Open a window displaying the lexical graph
-	 */
-	public void displayLex() {
-		//this.lexGraph.display();
-		Set<SemanticNode<?>> nodes = new HashSet<SemanticNode<?>>();
-		Set<SemanticEdge> edges = new HashSet<SemanticEdge>();
-		Map<Color, List<SemanticNode<?>>> nodeProperties = new HashMap<Color, List<SemanticNode<?>>>();
-		Map<Color, List<SemanticEdge>> edgeProperties = new HashMap<Color,List<SemanticEdge>>();
-		List<SemanticNode<?>> lexNodes = new ArrayList<SemanticNode<?>>();
-		nodeProperties.put(Color.CYAN, lexNodes);
-		List<SemanticEdge> lexEdges = new ArrayList<SemanticEdge>();
-		edgeProperties.put(Color.CYAN, lexEdges);
-		List<SemanticNode<?>> roleNodes = new ArrayList<SemanticNode<?>>();
-		nodeProperties.put(Color.BLUE, roleNodes);
-		List<SemanticEdge> roleEdges = new ArrayList<SemanticEdge>();
-		edgeProperties.put(Color.BLUE, roleEdges);
-		
-		for (SemanticNode<?> rNode : this.lexGraph.getNodes()) {
-			nodes.add(rNode);
-			if (rNode instanceof SenseNode)
-				lexNodes.add(rNode);
-			else if (rNode instanceof SkolemNode)
-				roleNodes.add(rNode);
-		}
-		for (SemanticEdge rEdge : this.lexGraph.getEdges()) {
-			edges.add(rEdge);
-			if (rEdge instanceof LexEdge)
-				lexEdges.add(rEdge);
-			else if (rEdge instanceof RoleEdge)
-				roleEdges.add(rEdge);
-		}
-		
-		SemGraph subGraph = this.graph.getSubGraph(nodes, edges);
-		subGraph.display(nodeProperties, edgeProperties);
-	}
-	
-	/**
-	 * Open a window displaying the dependency graph
-	 */
 	public void displayDependencies() {
-		this.dependencyGraph.display();
+		 this.getDependencyGraph().display();
 	}
 	
-	/**
-	 * Open a window displaying the link graph
-	 */
-	public void displayLinks() {
-		this.linkGraph.display();
+	public void displayContexts() {
+		 this.getContextGraph().display();
+	}
+	
+	public void displayLex() {
+		this.getLexGraph().display();
 	}
 	
 	
-	/**
-	 * Open a window displaying the role and context graphs.
-	 * This is generally the most readable/useful display
-	 */
-	public void generalDisplay() {
-		Set<SemanticNode<?>> nodes = new HashSet<SemanticNode<?>>();
-		Set<SemanticEdge> edges = new HashSet<SemanticEdge>();
-		Map<Color, List<SemanticNode<?>>> nodeProperties = new HashMap<Color, List<SemanticNode<?>>>();
-		Map<Color, List<SemanticEdge>> edgeProperties = new HashMap<Color,List<SemanticEdge>>();
-		List<SemanticNode<?>> roleNodes = new ArrayList<SemanticNode<?>>();
-		nodeProperties.put(Color.BLUE, roleNodes);
-		List<SemanticEdge> roleEdges = new ArrayList<SemanticEdge>();
-		edgeProperties.put(Color.BLACK, roleEdges);
-		List<SemanticNode<?>> contextNodes = new ArrayList<SemanticNode<?>>();
-		nodeProperties.put(Color.LIGHT_GRAY, contextNodes);
-		List<SemanticEdge> contextEdges = new ArrayList<SemanticEdge>();
-		edgeProperties.put(Color.LIGHT_GRAY, contextEdges);
+	public void displayProperties() {
+		 this.getPropertyGraph().display();
+	}
+	
+	public void displayCoref() {
+		 this.getLinkGraph().display();
+	}
+	
+	public void display() {
+		 this.graph.display();
+	}
+	
+	public void displayRolesAndCtxs() {
+		Set<SemanticNode<?>> mergedNodes = new HashSet<SemanticNode<?>>();
+		mergedNodes.addAll(this.getRoleGraph().getNodes());
+		mergedNodes.addAll(this.getContextGraph().getNodes());
 		
-		for (SemanticNode<?> rNode : this.roleGraph.getNodes()) {
-			nodes.add(rNode);
-			roleNodes.add(rNode);
-		}
-		for (SemanticEdge rEdge : this.roleGraph.getEdges()) {
-			edges.add(rEdge);
-			roleEdges.add(rEdge);
-		}
-		for (SemanticNode<?> cNode : this.contextGraph.getNodes()) {
-			nodes.add(cNode);
-			if (!roleNodes.contains(cNode)) {
-				contextNodes.add(cNode);
-			}
-		}
-		for (SemanticEdge cEdge : this.contextGraph.getEdges()) {
-			edges.add(cEdge);
-			if (!roleEdges.contains(cEdge)) {
-				contextEdges.add(cEdge);
-			}
-		}
-		SemGraph subGraph = this.graph.getSubGraph(nodes, edges);
-		subGraph.display(nodeProperties, edgeProperties);
+		Set<SemanticEdge> mergedEdges = new HashSet<SemanticEdge>();
+		mergedEdges.addAll(this.getRoleGraph().getEdges());
+		mergedEdges.addAll(this.getContextGraph().getEdges());
+		SemGraph subgraph = this.getSubGraph(mergedNodes, mergedEdges);
+		subgraph.display();
 	}
-
-	public void nonLexicalDisplay() {
-		Set<SemanticNode<?>> nodes = new HashSet<SemanticNode<?>>();
-		Set<SemanticEdge> edges = new HashSet<SemanticEdge>();
-		Map<Color, List<SemanticNode<?>>> nodeProperties = new HashMap<Color, List<SemanticNode<?>>>();
-		Map<Color, List<SemanticEdge>> edgeProperties = new HashMap<Color,List<SemanticEdge>>();
-		List<SemanticNode<?>> roleNodes = new ArrayList<SemanticNode<?>>();
-		nodeProperties.put(Color.BLUE, roleNodes);
-		List<SemanticEdge> roleEdges = new ArrayList<SemanticEdge>();
-		edgeProperties.put(Color.BLACK, roleEdges);
-		List<SemanticNode<?>> contextNodes = new ArrayList<SemanticNode<?>>();
-		nodeProperties.put(Color.DARK_GRAY, contextNodes);
-		List<SemanticEdge> contextEdges = new ArrayList<SemanticEdge>();
-		edgeProperties.put(Color.CYAN, contextEdges);		
-		List<SemanticEdge> linkEdges = new ArrayList<SemanticEdge>();
-		edgeProperties.put(Color.GREEN, linkEdges);
-		List<SemanticEdge> propertyEdges = new ArrayList<SemanticEdge>();
-		edgeProperties.put(Color.LIGHT_GRAY, propertyEdges);
-		List<SemanticNode<?>> propertyNodes = new ArrayList<SemanticNode<?>>();
-		nodeProperties.put(Color.LIGHT_GRAY, propertyNodes);
-
-		for (SemanticNode<?> rNode : this.roleGraph.getNodes()) {
-			nodes.add(rNode);
-			roleNodes.add(rNode);
-		}
-		for (SemanticEdge rEdge : this.roleGraph.getEdges()) {
-			edges.add(rEdge);
-			roleEdges.add(rEdge);
-		}
-		for (SemanticNode<?> cNode : this.contextGraph.getNodes()) {
-			nodes.add(cNode);
-			if (!roleNodes.contains(cNode)) {
-				contextNodes.add(cNode);
-			}
-		}
-		for (SemanticEdge cEdge : this.contextGraph.getEdges()) {
-			edges.add(cEdge);
-			if (!roleEdges.contains(cEdge)) {
-				contextEdges.add(cEdge);
-			}
-		}
-		for (SemanticNode<?> pNode : this.propertyGraph.getNodes()) {
-			nodes.add(pNode);
-			if (!roleNodes.contains(pNode) && !contextNodes.contains(pNode)) {
-				propertyNodes.add(pNode);
-			}
-		}
-		for (SemanticEdge pEdge : this.propertyGraph.getEdges()) {
-			edges.add(pEdge);
-			if (!roleEdges.contains(pEdge) && ! contextEdges.contains(pEdge)) {
-				propertyEdges.add(pEdge);
-			}
-		}
-		for (SemanticEdge lEdge : this.linkGraph.getEdges()) {
-			edges.add(lEdge);
-			if (!roleEdges.contains(lEdge) && ! contextEdges.contains(lEdge) && !propertyEdges.contains(lEdge)) {
-				linkEdges.add(lEdge);
-			}
-		}
-		SemGraph subGraph = this.graph.getSubGraph(nodes, edges);
-		subGraph.display(nodeProperties, edgeProperties);
+	
+	public void exportGraphAsJson(){
+		this.graph.exportGraphAsJson();
 	}
+	
+	/**
+	 * Save whole graph as a static image
+	 * @return
+	 */
+	public BufferedImage saveGraphAsImage(){
+		BufferedImage image = this.graph.saveGraphAsImage();
+		return image;
+	}
+	
+	
+	/**
+	 * Save roles graph as a static image with the blue color
+	 * @return
+	 */
+	public BufferedImage saveRolesAsImage(){
+		BufferedImage image = this.roleGraph.saveGraphAsImage();	
+		return image;
+	}
+	
+	/**
+	 * Save contexts graph as a static image with the grey color
+	 * @return
+	 */
+	public BufferedImage saveContextsAsImage(){	
+		BufferedImage image = this.contextGraph.saveGraphAsImage();
+		return image;
+	}
+	
+	/**
+	 * Save properties graph as a static image with the magenta color
+	 * @return
+	 */
+
+	public BufferedImage savePropertiesAsImage(){
+		BufferedImage image = this.propertyGraph.saveGraphAsImage();
+		return image;
+	}
+	
+	/**
+	 * Save lexical graph as a static image with the cyan color
+	 * @return
+	 */
+	public BufferedImage saveLexAsImage(){
+		BufferedImage image = this.lexGraph.saveGraphAsImage();
+		return image;
+	}
+	
+	/**
+	 * Save deps graph as a static image with default colors (orange)
+	 * @return
+	 */
+	public BufferedImage saveDepsAsImage(){
+		BufferedImage image = this.dependencyGraph.saveGraphAsImage();	
+		return image;
+	}
+	
+	/**
+	 * Save coref graph as a static image with the green color
+	 * @return
+	 */
+	public BufferedImage saveCorefAsImage(){	
+		BufferedImage image = this.linkGraph.saveGraphAsImage();	
+		return image;
+	}
+	
+	public String getMxGraph(){
+		return this.roleGraph.getMxGraph();
+	}
+	
+
 	
 	/**
 	 * Displays the whole semantic graph as a string. Suitable for testsuites. 
@@ -848,7 +766,7 @@ public class SemanticGraph implements Serializable {
 	 * @param other
 	 */
 	public void merge(SemanticGraph other) {
-		this.graph.merge(other.graph);
+		this.graph.merge(other.getGraph());
 		this.roleGraph.merge(other.roleGraph);
 		this.contextGraph.merge(other.contextGraph);
 		this.propertyGraph.merge(other.propertyGraph);
@@ -1291,9 +1209,6 @@ public class SemanticGraph implements Serializable {
 	public boolean isEmpty() {
 		return this.graph.getNodes().isEmpty();
 	}
-
-
-
 
 
 

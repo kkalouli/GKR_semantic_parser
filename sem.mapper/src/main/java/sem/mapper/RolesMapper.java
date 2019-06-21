@@ -9,9 +9,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
-import org.jgrapht.graph.DirectedSubgraph;
-import org.jgrapht.graph.Subgraph;
-
 import sem.graph.SemGraph;
 import sem.graph.SemJGraphT;
 import sem.graph.SemanticEdge;
@@ -628,7 +625,9 @@ public class RolesMapper implements Serializable {
 			role = GraphLabels.NMOD;	
 		}  else if (role.equals("") && edgeLabel.contains("advcl")){
 			role = GraphLabels.AMOD;	
-		}
+		} else if (role.equals("") && edgeLabel.contains("appos")){
+			role = GraphLabels.NMOD;	
+		} 
 		
 		// if the role is not empty, create the edge for this role and set the contexts
 		if (!role.equals("")){

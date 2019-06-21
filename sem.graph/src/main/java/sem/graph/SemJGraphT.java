@@ -1,52 +1,94 @@
 package sem.graph;
 
 
+import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Image;
+import java.awt.Insets;
+import java.awt.geom.Rectangle2D;
+import java.awt.image.BufferedImage;
+import java.awt.image.ColorModel;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.io.Serializable;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import javax.swing.JApplet;
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.text.Document;
+
 import java.util.Set;
 
-import javax.swing.JFrame;
-import javax.swing.JScrollPane;
 
-import org.jgraph.JGraph;
-import org.jgraph.graph.DefaultGraphCell;
-import org.jgraph.graph.GraphConstants;
-import org.jgrapht.DirectedGraph;
+
 import org.jgrapht.Graph;
-import org.jgrapht.UndirectedGraph;
-import org.jgrapht.alg.DijkstraShortestPath;
-import org.jgrapht.ext.JGraphModelAdapter;
+import org.jgrapht.ListenableGraph;
+import org.jgrapht.alg.shortestpath.DijkstraShortestPath;
+import org.jgrapht.ext.JGraphXAdapter;
+import org.jgrapht.graph.AsSubgraph;
 import org.jgrapht.graph.AsUndirectedGraph;
 import org.jgrapht.graph.DirectedMultigraph;
-import org.jgrapht.graph.DirectedSubgraph;
 import org.jgrapht.graph.EdgeReversedGraph;
+import org.jgrapht.io.ExportException;
+import org.jgrapht.io.JSONExporter;
 import org.jgrapht.traverse.BreadthFirstIterator;
+import org.w3c.dom.Node;
 
-import com.jgraph.layout.JGraphFacade;
-import com.jgraph.layout.JGraphLayout;
-import com.jgraph.layout.hierarchical.JGraphHierarchicalLayout;
+import com.mxgraph.io.mxCodec;
+import com.mxgraph.layout.mxCircleLayout;
+import com.mxgraph.layout.mxOrganicLayout;
+import com.mxgraph.layout.hierarchical.mxHierarchicalLayout;
+import com.mxgraph.model.mxCell;
+import com.mxgraph.swing.mxGraphComponent;
+import com.mxgraph.util.mxCellRenderer;
+import com.mxgraph.util.mxConstants;
+import com.mxgraph.util.mxRectangle;
+import com.mxgraph.util.mxUtils;
+import com.mxgraph.util.mxXmlUtils;
+import com.mxgraph.view.mxGraph;
+
+import sem.graph.vetypes.ContextEdge;
+import sem.graph.vetypes.ContextNode;
+import sem.graph.vetypes.LexEdge;
+import sem.graph.vetypes.RoleEdge;
+import sem.graph.vetypes.SenseNode;
+import sem.graph.vetypes.SkolemNode;
+import sem.graph.vetypes.TermNode;
+import sem.graph.vetypes.ValueNode;
+
+
 
 /**
  * Implementation of SemGraph via JGraphT
  *
  */
-public class SemJGraphT implements SemGraph, Serializable{
+public class SemJGraphT  extends JApplet implements  SemGraph, Serializable{
 
 	private static final long serialVersionUID = 4437969385952923418L;
-	private DirectedGraph<SemanticNode<?>, SemanticEdge> graph;
+	private Graph<SemanticNode<?>, SemanticEdge> graph;
 
 	public SemJGraphT() {
 		this.graph = new DirectedMultigraph<SemanticNode<?>, SemanticEdge>(SemanticEdge.class);
 	}
 
-	public SemJGraphT(DirectedGraph<SemanticNode<?>, SemanticEdge> graph) {
+	public SemJGraphT(Graph<SemanticNode<?>, SemanticEdge> graph) {
 			this.graph = graph;
+	}
+	
+	public Graph<SemanticNode<?>, SemanticEdge> getSemJGraphT(){
+		return graph;
 	}
 	
 
@@ -259,100 +301,306 @@ public class SemJGraphT implements SemGraph, Serializable{
 	}
 
 	@Override
-	public List<SemanticEdge> getShortestPath(SemanticNode<?> start,
-			SemanticNode<?> end) {
-		DijkstraShortestPath<SemanticNode<?>, SemanticEdge> dsp
-			= new DijkstraShortestPath<SemanticNode<?>, SemanticEdge>(this.graph, start, end);
-		return dsp.getPathEdgeList();
+	public List<SemanticEdge> getShortestPath(SemanticNode<?> start,SemanticNode<?> end) {
+		DijkstraShortestPath<SemanticNode<?>, SemanticEdge> dsp = new DijkstraShortestPath<SemanticNode<?>, SemanticEdge>(this.graph);
+		return dsp.getPath(start,end).getEdgeList(); 
+		
 	}
 
 	@Override
-	public List<SemanticEdge> getShortestUndirectedPath(
-			SemanticNode<?> start, SemanticNode<?> end) {
-		UndirectedGraph<SemanticNode<?>, SemanticEdge> ugraph 
-			= new AsUndirectedGraph<SemanticNode<?>, SemanticEdge>(this.graph);
-		DijkstraShortestPath<SemanticNode<?>, SemanticEdge> dsp
-			= new DijkstraShortestPath<SemanticNode<?>, SemanticEdge>(ugraph, start, end);
-		return dsp.getPathEdgeList();
+	public List<SemanticEdge> getShortestUndirectedPath(SemanticNode<?> start, SemanticNode<?> end) {
+		AsUndirectedGraph<SemanticNode<?>, SemanticEdge> ugraph = new AsUndirectedGraph<SemanticNode<?>, SemanticEdge>(this.graph);
+		DijkstraShortestPath<SemanticNode<?>, SemanticEdge> dsp = new DijkstraShortestPath<SemanticNode<?>, SemanticEdge>(ugraph);
+		return dsp.getPath(start,end).getEdgeList();
+	}
+	
+	public String getMxGraph(){	
+		mxGraph mx = new mxGraph();
+		mx.getModel().beginUpdate();
+		Object parent = mx.getDefaultParent();
+		HashMap<String, Object> traversedNodes = new HashMap<String, Object>();
+		try
+		{
+			for (SemanticEdge edge : graph.edgeSet()){
+				Object v1 = null;
+				Object v2 = null;
+				String sourceId = edge.getSourceVertexId();
+				String targetId = edge.getDestVertexId();
+				String sourceColor = getColorForVertex(sourceId);
+				String targetColor = getColorForVertex(targetId);
+				if (sourceColor.equals("top")){
+					sourceColor = "#b3b5b8";
+					sourceId = "top";
+				}
+				if (targetColor.equals("top")){
+					targetColor = "#b3b5b8";
+					targetId = "top";
+				}
+				if (!traversedNodes.containsKey(sourceId)){
+					v1 = mx.insertVertex(parent, null, sourceId, 20, 20, 80, 30,"defaultVertex;fillColor="+sourceColor);
+					traversedNodes.put(sourceId, v1);
+				} else {
+					v1 = traversedNodes.get(sourceId);
+				}
+				if (!traversedNodes.containsKey(targetId)){
+					v2 = mx.insertVertex(parent, null, targetId, 200, 150, 80, 30, "defaultVertex;fillColor="+targetColor);
+					traversedNodes.put(targetId, v2);
+				} else {
+					v2 = traversedNodes.get(targetId);
+				}
+				Object e1 = mx.insertEdge(parent, null, edge.getLabel(), v1, v2);
+			}
+		   
+		}
+		finally
+		{
+		   // Updates the display
+			mx.getModel().endUpdate();
+		}
+		
+		mxCodec encoder = new mxCodec();
+		Node result = encoder.encode(mx.getModel());	
+		String xml = mxUtils.getPrettyXml(result);	
+		return xml;
+	}
+	
+	private String getColorForVertex(String nodeLabel){
+		String color = "";
+		SemanticNode<?> nodeToGet = null;
+		for (SemanticNode<?> node : graph.vertexSet()){
+			if (node.getLabel().equals(nodeLabel)){
+				nodeToGet = node;
+			}
+		}
+		if (nodeToGet instanceof SkolemNode){
+			color = "#bce7fd";
+		} else if (nodeToGet instanceof SenseNode){
+			color = "#FF4C4C";
+		} else if (nodeToGet instanceof ContextNode){
+			color = "#b3b5b8";
+		} else if (nodeToGet instanceof ValueNode){
+			color = "#B2B2FF";
+		} else if (nodeToGet instanceof TermNode){
+			color = "#FFA500";
+		} else if (nodeToGet == null){
+			color = "top";
+		} else {
+			color = "#9CC1A5";
+		}
+		return color;
+	}
+	
+	public JFrame display(){
+		JGraphXAdapter<SemanticNode<?>, SemanticEdge> jgxAdapter = new JGraphXAdapter<SemanticNode<?>, SemanticEdge>(graph);
+		mxGraphComponent component = new mxGraphComponent(jgxAdapter);
+		component.setConnectable(false);
+		component.getGraph().setAllowDanglingEdges(false);
+		mxHierarchicalLayout layout = new mxHierarchicalLayout(jgxAdapter);
+		layout.setIntraCellSpacing(80);
+		//layout.setFineTuning(true);
+		layout.execute(jgxAdapter.getDefaultParent());
+		// get the parent of the mxgraph
+		Object mxDefaultParent = component.getGraph().getDefaultParent();
+		
+		// modify colors of nodes and edges based on the type of node/edge
+		for (Object node: component.getGraph().getChildCells(mxDefaultParent)){
+			if (((mxCell) node).getValue() instanceof SkolemNode){
+				component.getGraph().setCellStyles(mxConstants.STYLE_FILLCOLOR, "#bce7fd", new Object[]{node});
+				component.getGraph().setCellStyles(mxConstants.STYLE_STROKECOLOR, "#bce7fd", new Object[]{node});
+			} else if (((mxCell) node).getValue() instanceof SenseNode){
+				component.getGraph().setCellStyles(mxConstants.STYLE_FILLCOLOR, "#FF4C4C", new Object[]{node});
+				component.getGraph().setCellStyles(mxConstants.STYLE_STROKECOLOR, "#FF4C4C", new Object[]{node});
+			} else if (((mxCell) node).getValue() instanceof ContextNode){
+				component.getGraph().setCellStyles(mxConstants.STYLE_FILLCOLOR, "#B2B2B2", new Object[]{node});
+				component.getGraph().setCellStyles(mxConstants.STYLE_STROKECOLOR, "#B2B2B2", new Object[]{node});
+			} else if (((mxCell) node).getValue() instanceof ValueNode){
+				component.getGraph().setCellStyles(mxConstants.STYLE_FILLCOLOR, "#B2B2FF", new Object[]{node});
+				component.getGraph().setCellStyles(mxConstants.STYLE_STROKECOLOR, "#B2B2FF", new Object[]{node});
+			} else if (((mxCell) node).getValue() instanceof TermNode){
+				component.getGraph().setCellStyles(mxConstants.STYLE_FILLCOLOR, "#FFA500", new Object[]{node});
+				component.getGraph().setCellStyles(mxConstants.STYLE_STROKECOLOR, "#FFA500", new Object[]{node});
+			} else {
+				component.getGraph().setCellStyles(mxConstants.STYLE_FILLCOLOR, "#9CC1A5", new Object[]{node});
+				component.getGraph().setCellStyles(mxConstants.STYLE_STROKECOLOR, "#9CC1A5", new Object[]{node});
+			}
+		}
+		component.refresh();
+			
+		JFrame frame = new JFrame();
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);	
+		frame.getContentPane().add(component);
+		//frame.setUndecorated(true);
+		frame.pack();
+		frame.setVisible(true);
+		return frame;
 	}
 
-	@Override
-	public void display() {
+	
+	 /***
+	  * Create a static image out of the graph.
+	  */
+	public BufferedImage saveGraphAsImage(){
+		// following code if the graph is empty: just show empty graph
+		BufferedImage image = new BufferedImage(30, 10, BufferedImage.TYPE_INT_RGB);
+		Graphics graphics = image.getGraphics();
+        graphics.setColor(Color.WHITE);
+        graphics.fillRect(0, 0, 30, 10);
+        graphics.setColor(Color.BLACK);
+        //graphics.setFont(new Font("Arial Black", Font.PLAIN, 8));
+        String str = "not available";
+        //graphics.drawString(str, 2, 5);
+		if (this.graph.vertexSet().isEmpty())
+			return image;
+		// else if graph is full:		
+		JFrame frame = this.display();
+		//frame.setSize(frame.getComponent(0).getSize());
+		// create buffered image and project jframe on it
+		try
+		{	
+			//Image img = mxCellRenderer.createBufferedImage(frame.getComponent(0).getGraph(), null, 1, Color.WHITE, false, null); 		
+			//frame.setUndecorated(true);
+			int compWidth = frame.getComponent(0).getWidth();
+			int compHeight = frame.getComponent(0).getHeight();
+			int width = frame.getContentPane().getWidth();
+			int height = frame.getContentPane().getHeight();
+			if (compWidth > width || compHeight > height ){
+				frame.getComponent(0).setSize(width, height);
+				width = frame.getComponent(0).getWidth();
+				height = frame.getComponent(0).getHeight();
+			}
+			image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);		
+			Graphics2D graphics2D = image.createGraphics();
+			graphics2D.setBackground(Color.WHITE);
+			//graphics2D.fillRect(0, 0, frame.getWidth(), frame.getHeight());
+			//graphics2D.setStroke(new BasicStroke(0));
+			frame.getContentPane().paint(graphics2D);	
+			graphics2D.dispose();
+			frame.dispose();
+		}
+		catch(Exception exception)
+		{
+			//code
+		}
+		// set frame to invisible so that the java swing window disappears
+		frame.setVisible(false);
+		return image;
+	}
+	
+	
+	/**
+	 * Create a static image out of the graph with the given colormap for the nodes and the edges.
+	 */
+	/*@SuppressWarnings({ "rawtypes", "unchecked" })
+	public BufferedImage saveGraphAsImage(Map<Color, List<SemanticNode<?>>> nodeProperties,
+			Map<Color, List<SemanticEdge>> edgeProperties){
+		// following code if the graph is empty: just show empty graph
+		BufferedImage image = new BufferedImage(200, 40, BufferedImage.TYPE_INT_RGB);
+		Graphics graphics = image.getGraphics();
+        graphics.setColor(Color.WHITE);
+        graphics.fillRect(0, 0, 200, 40);
+        graphics.setColor(Color.BLACK);
+        graphics.setFont(new Font("Arial Black", Font.PLAIN, 18));
+        graphics.drawString("graph not available", 10, 20);
+		if (this.graph.vertexSet().isEmpty())
+			return image;		
+		// else if graph is full:
+		JGraphModelAdapter jgAdapter = new JGraphModelAdapter<SemanticNode<?>, SemanticEdge>(this.graph);
+		JGraph jgraph = new JGraph(jgAdapter); 
+		JGraphFacade facade = new JGraphFacade(jgraph);
+		JGraphLayout layout = new JGraphHierarchicalLayout();
+		layout.run(facade);	
+		// rescale whole facade so that the nodes are further apart and thus the edge labels dont overlap
+		//facade.scale(facade.getVertices(), 1.2, 1.0, 0, 0);
+		// rescale cells that are bigger than the default to fit their content size (get size of font)
+		for (Object vert : facade.getVertices()) {
+			//Rectangle2D rect = facade.getBounds(vert);
+			//rect.setRect(rect.getX()-50, rect.getY(), rect.getWidth(), rect.getHeight());
+			//facade.setBounds(vert, rect);
+			int width = graphics.getFontMetrics().stringWidth(vert.toString());
+			//90 is the default size
+			if (width > 90) {
+				facade.setSize(vert, width, 30);
+			}
+		}
+		Map nested = facade.createNestedMap(true, true);
+		jgraph.getGraphLayoutCache().getModel().beginUpdate();
+		jgraph.getGraphLayoutCache().edit(nested);	
+		
+		// Add additional node and edge properties
+		// Currently, only colours
+		Map nested1 = new HashMap();
+		for (Entry<Color, List<SemanticNode<?>>> kv : nodeProperties.entrySet()) {
+			Map nodeColor = new HashMap();
+			GraphConstants.setBackground(nodeColor, kv.getKey());
+			for (SemanticNode<?> n : kv.getValue()) {
+				DefaultGraphCell cell = jgAdapter.getVertexCell(n);
+				nested1.put(cell, nodeColor);
+			}
+		}
+		for (Entry<Color, List<SemanticEdge>> kv : edgeProperties.entrySet()) {
+			Map edgeColor = new HashMap();
+			GraphConstants.setLineColor(edgeColor, kv.getKey());
+			for (SemanticEdge e : kv.getValue()) {
+				DefaultGraphCell cell = jgAdapter.getEdgeCell(e);
+				nested1.put(cell, edgeColor);
+			}
+		}
+		jgraph.getGraphLayoutCache().getModel().beginUpdate();
+		jgraph.getGraphLayoutCache().edit(nested1);
+		jgraph.getGraphLayoutCache().getModel().endUpdate();
+		jgraph.getGraphLayoutCache().getModel().endUpdate();
+
+		// Show in Frame
+		JScrollPane component = new JScrollPane(jgraph);
+		JFrame frame = new JFrame();
+		frame.setBackground(Color.WHITE);
+		frame.setUndecorated(true);
+		frame.getContentPane().add(component);
+		frame.pack();
+		frame.setLocation(-2000, -2000);
+		frame.setVisible(true);	
+		try
+		{
+			image = new BufferedImage(frame.getWidth(), frame.getHeight(), BufferedImage.TYPE_INT_RGB);		
+			Graphics2D graphics2D = image.createGraphics();
+			frame.paint(graphics2D);	
+			component.print(graphics2D);
+			graphics2D.dispose();
+			frame.dispose();
+			//ImageIO.write(image,"png", new File(imagePath));
+		}
+		catch(Exception exception)
+		{
+			//code
+		}
+		frame.setVisible(false);
+		jgraph.setVisible(false);
+		return image;
+	}
+	
+	*/
+	
+	public void exportGraphAsJson(){
+		JSONExporter<SemanticNode<?>, SemanticEdge> exporter = new JSONExporter<SemanticNode<?>, SemanticEdge>();
+		Writer writer;
 		try {
-			JGraph jgraph = new JGraph(new JGraphModelAdapter<SemanticNode<?>, SemanticEdge>(this.graph));
-			JGraphFacade facade = new JGraphFacade(jgraph);
-			JGraphLayout layout = new JGraphHierarchicalLayout();
-			layout.run(facade);
-			@SuppressWarnings("rawtypes")
-			Map nested = facade.createNestedMap(true, true);
-			jgraph.getGraphLayoutCache().edit(nested);
-			// Show in Frame
-			JFrame frame = new JFrame();
-			frame.getContentPane().add(new JScrollPane(jgraph));
-			frame.pack();
-			frame.setVisible(true);	
-		} catch (IllegalArgumentException e) {
-			// run(facade) sometimes triggers "Comparison method violates its general contract!"
+			writer = new FileWriter("semGraph_to_json.json");
+			exporter.exportGraph(graph, writer);
+		} catch (IOException | ExportException e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		
 	}
 
-	@SuppressWarnings({ "rawtypes", "unchecked" })
-	@Override
-	public void display(Map<Color, List<SemanticNode<?>>> nodeProperties,
-			Map<Color, List<SemanticEdge>> edgeProperties) {
-		try {
-			// Get basic graph with hierarchical layout
-			JGraphModelAdapter<SemanticNode<?>, SemanticEdge> jgAdapter = new JGraphModelAdapter<SemanticNode<?>, SemanticEdge>(this.graph);
-			JGraph jgraph = new JGraph(jgAdapter);
-			JGraphFacade facade = new JGraphFacade(jgraph);
-			JGraphLayout layout = new JGraphHierarchicalLayout();
-			layout.run(facade);
-			Map nested = facade.createNestedMap(true, true);
-			jgraph.getGraphLayoutCache().getModel().beginUpdate();
-			jgraph.getGraphLayoutCache().edit(nested);
-
-			// Add additional node and edge properties
-			// Currently, only colours
-			Map nested1 = new HashMap();
-			for (Entry<Color, List<SemanticNode<?>>> kv : nodeProperties.entrySet()) {
-				Map nodeColor = new HashMap();
-				GraphConstants.setBackground(nodeColor, kv.getKey());
-				for (SemanticNode<?> n : kv.getValue()) {
-					DefaultGraphCell cell = jgAdapter.getVertexCell(n);
-					nested1.put(cell, nodeColor);
-				}
-			}
-			for (Entry<Color, List<SemanticEdge>> kv : edgeProperties.entrySet()) {
-				Map edgeColor = new HashMap();
-				GraphConstants.setLineColor(edgeColor, kv.getKey());
-				for (SemanticEdge e : kv.getValue()) {
-					DefaultGraphCell cell = jgAdapter.getEdgeCell(e);
-					nested1.put(cell, edgeColor);
-				}
-			}
-			jgraph.getGraphLayoutCache().getModel().beginUpdate();
-			jgraph.getGraphLayoutCache().edit(nested1);
-			jgraph.getGraphLayoutCache().getModel().endUpdate();
-			jgraph.getGraphLayoutCache().getModel().endUpdate();
-
-			// Show in Frame
-			JFrame frame = new JFrame();
-			frame.getContentPane().add(new JScrollPane(jgraph));
-			frame.pack();
-			frame.setVisible(true);		
-		} catch (IllegalArgumentException e) {
-			// run(facade) sometimes triggers "Comparison method violates its general contract!"
-			e.printStackTrace();
-		}
-	}
-
+	
 	@Override
 	public SemGraph getSubGraph(Set<SemanticNode<?>> nodes,
 			Set<SemanticEdge> edges) {
-		DirectedSubgraph<SemanticNode<?>, SemanticEdge> subGraph = new DirectedSubgraph<SemanticNode<?>, SemanticEdge>(this.graph, nodes, edges);
+		AsSubgraph<SemanticNode<?>, SemanticEdge> subGraph = new AsSubgraph<SemanticNode<?>, SemanticEdge>(this.graph, nodes, edges);
 		return new SemJGraphT(subGraph);
 	}
+
 
 
 }

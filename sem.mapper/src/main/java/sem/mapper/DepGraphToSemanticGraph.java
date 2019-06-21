@@ -28,6 +28,8 @@ import java.util.regex.Pattern;
 
 import javax.imageio.ImageIO;
 
+import org.jgrapht.Graph;
+
 import edu.stanford.nlp.coref.data.CorefChain;
 import edu.stanford.nlp.coref.data.CorefChain.CorefMention;
 import edu.stanford.nlp.ling.IndexedWord;
@@ -403,7 +405,7 @@ public class DepGraphToSemanticGraph implements Serializable {
 				}
 				// adding the property edge cardinality (singular, plural)
 				if (!cardinality.equals("")){
-					PropertyEdge cardinalityEdge = new PropertyEdge(GraphLabels.CARDINALITY, new PropertyEdgeContent());
+					PropertyEdge cardinalityEdge = new PropertyEdge(GraphLabels.CARDINAL, new PropertyEdgeContent());
 					graph.addPropertyEdge(cardinalityEdge, node, new ValueNode(cardinality, new ValueNodeContent()));
 				}
 				// adding the property edge name (proper or common)
@@ -560,7 +562,7 @@ public class DepGraphToSemanticGraph implements Serializable {
 			if (depEdge.getLabel().equals("appos")){
 				startNode = graph.getStartNode(depEdge);
 				finishNode = graph.getFinishNode(depEdge);
-				LinkEdge linkEdge = new LinkEdge(GraphLabels.APPOSITIVE_IDENTICAL_TO, new DefaultEdgeContent());
+				LinkEdge linkEdge = new LinkEdge(GraphLabels.APPOS_IDENTICAL_TO, new DefaultEdgeContent());
 				graph.addLinkEdge(linkEdge, startNode, finishNode);
 			}
 		}
@@ -644,16 +646,35 @@ public class DepGraphToSemanticGraph implements Serializable {
 		if (!wholeCtx.endsWith("."))
 			wholeCtx = wholeCtx+".";
 		sem.graph.SemanticGraph graph = this.sentenceToGraph(sentence, wholeCtx);
+		/*graph.displayRoles();
 		graph.displayDependencies();
 		graph.displayProperties();
 		graph.displayLex();
 		graph.displayContexts();
-		graph.displayRoles();
-		graph.displayLinks();
-		//graph.nonLexicalDisplay();
-		graph.generalDisplay();
-		graph.display();
-		/*ImageIO.write(graph.saveRolesAsImage(),"png", new File("/Users/kkalouli/Desktop/roles.png"));*/
+		graph.displayRolesAndCtxs();
+		graph.displayCoref();*/
+		String ctxs = graph.getContextGraph().getMxGraph();
+		String roles = graph.getRoleGraph().getMxGraph();
+		String deps = graph.getDependencyGraph().getMxGraph();
+		String props = graph.getPropertyGraph().getMxGraph();
+		String lex = graph.getLexGraph().getMxGraph();
+		String coref = graph.getLinkGraph().getMxGraph();
+		BufferedWriter writer = new BufferedWriter( new FileWriter("-7.txt", true));
+		writer.write(roles);
+		writer.write("\n\n");
+		writer.write(deps);
+		writer.write("\n\n");
+		writer.write(ctxs);
+		writer.write("\n\n");
+		writer.write(props);
+		writer.write("\n\n");
+		writer.write(lex);
+		writer.write("\n\n");
+		writer.write(coref);
+		writer.write("\n\n");
+		writer.flush();
+		writer.close();
+		//ImageIO.write(graph.saveDepsAsImage(),"png", new File("/Users/kkalouli/Desktop/deps.png"));
 		System.out.println(graph.displayAsString());
 		for (SemanticNode<?> node : graph.getDependencyGraph().getNodes()){
 				System.out.println(node.getLabel()+((SkolemNodeContent) node.getContent()).getContext());
@@ -689,8 +710,8 @@ public class DepGraphToSemanticGraph implements Serializable {
 		DepGraphToSemanticGraph semConverter = new DepGraphToSemanticGraph();
 		//semConverter.deserializeFileWithComputedPairs("/Users/kkalouli/Documents/Stanford/comp_sem/forDiss/test.txt");
 		//semConverter.processTestsuite("/Users/kkalouli/Documents/Stanford/comp_sem/forDiss/test.txt");
-		String sentence = "Negotiations might prevent the strike.";//"A family is watching a little boy who is hitting a baseball.";
-		String context = "A boy is walking.";
+		String sentence = "John might apply for the position.";//"A family is watching a little boy who is hitting a baseball.";
+		String context = "The boy faked the illness.";
 		semConverter.processSentence(sentence, sentence+" "+context);	
 	}
 }
