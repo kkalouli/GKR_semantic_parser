@@ -6,27 +6,21 @@ plugins {
 dependencies {
 	
 	// compile all jars that are not found in repositories 
-	compile fileTree(dir: '/Users/kkalouli/Documents/libraries/GKR_libs/', include: ['*.jar'])
-	// for CALD:
-	//compile fileTree(dir: '/Users/caldadmin/Documents/dissertation/GKR_libs/', include: ['*.jar'])
-	
+	compile fileTree(dir: '/Users/kkalouli/Documents/libraries/GKR_libs/', include: ['*.jar'])	
     
     // https://mvnrepository.com/artifact/edu.stanford.nlp/stanford-corenlp
 	//compile group: 'edu.stanford.nlp', name: 'stanford-corenlp', version: '3.8.0' 
 	//compile group: 'edu.stanford.nlp', name: 'stanford-corenlp', version: '3.8.0', classifier: 'models'
 	// we have to exclude lucene because it clashes with the snowball stemmer version needed by JIGSAW
-	compile ('edu.stanford.nlp:stanford-corenlp:3.8.0:models') {
+	compile ('edu.stanford.nlp:stanford-corenlp:3.9.2:models') {
     exclude group: 'org.apache.lucene'}
-	compile ('edu.stanford.nlp:stanford-corenlp:3.8.0') {
+	compile ('edu.stanford.nlp:stanford-corenlp:3.9.2') {
     exclude group: 'org.apache.lucene'}
 	
 	
 	// https://mvnrepository.com/artifact/org.deeplearning4j/deeplearning4j-nlp
 	compile group: 'org.deeplearning4j', name: 'deeplearning4j-nlp', version: '0.9.1'
-	
-	// https://mvnrepository.com/artifact/org.tartarus.snowball/libstemmer
-	//compile group: 'org.tartarus.snowball', name: 'libstemmer', version: '1.0.0'
-	
+		
 	// https://mvnrepository.com/artifact/org.nd4j/nd4j-native-platform
 	compile group: 'org.nd4j', name: 'nd4j-native-platform', version: '0.9.1'
 	
@@ -40,6 +34,19 @@ dependencies {
 	// status of 20.03.2019: removed this and put back the original libstemmer (tartarues.snowball) dependency.
 	// seems to work with this one now.
 	compile "com.github.rholder:snowball-stemmer:1.3.0.581.1"
+	
+	// bert wrapper for java
+	implementation 'com.robrua.nlp:easy-bert:1.0.3'
+	// bert pretrained model
+	implementation 'com.robrua.nlp.models:easy-bert-uncased-L-12-H-768-A-12:1.0.0'
+	
+	// python wrapper for java
+	// https://mvnrepository.com/artifact/black.ninia/jep
+	compile group: 'black.ninia', name: 'jep', version: '3.7.0'
+	
+	
+		// https://mvnrepository.com/artifact/org.tartarus.snowball/libstemmer
+	//compile group: 'org.tartarus.snowball', name: 'libstemmer', version: '1.0.0'
 
 	// https://mvnrepository.com/artifact/mysql/mysql-connector-java
 	//13.3: compile group: 'mysql', name: 'mysql-connector-java', version: '5.0.3'

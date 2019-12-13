@@ -1,34 +1,22 @@
 package sem.mapper;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
 import java.util.Map.Entry;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import sem.graph.EdgeContent;
 import sem.graph.SemGraph;
 import sem.graph.SemanticEdge;
-import sem.graph.SemanticGraph;
 import sem.graph.SemanticNode;
 import sem.graph.vetypes.ContextHeadEdge;
 import sem.graph.vetypes.ContextNode;
 import sem.graph.vetypes.ContextNodeContent;
 import sem.graph.vetypes.GraphLabels;
-import sem.graph.vetypes.RoleEdge;
 import sem.graph.vetypes.RoleEdgeContent;
 import sem.graph.vetypes.SkolemNode;
 import sem.graph.vetypes.SkolemNodeContent;
@@ -54,8 +42,9 @@ public class ContextMapper implements Serializable {
 	private ArrayList<String> verbalForms;
 	private ArrayList<SemanticNode<?>> traversedNeighbors;
 	private ArrayList<String> modals;
+	private boolean interrogative;
 	
-	public ContextMapper(sem.graph.SemanticGraph graph, ArrayList<String> verbalForms){
+	public ContextMapper(sem.graph.SemanticGraph graph, ArrayList<String> verbalForms, boolean interrogative){
 		this.verbalForms = verbalForms;
 		this.graph = graph;
 		this.depGraph = this.graph.getDependencyGraph();
@@ -66,6 +55,7 @@ public class ContextMapper implements Serializable {
 		this.disjunction = false;
 		this.implCtxs = new HashMap<SemanticNode<?>,String>();
 		this.traversedNeighbors = new ArrayList<SemanticNode<?>>();
+		this.interrogative = interrogative;
 		this.modals = new ArrayList<String>();
 		modals.add("might");
 		modals.add("should");
@@ -80,11 +70,12 @@ public class ContextMapper implements Serializable {
 		
 		// read the file with the implicative/factive signatures
 		BufferedReader br = null;
+		InputStreamReader inputReader = null;
 		try {
-			ClassLoader classLoader = getClass().getClassLoader();
 			InputStream implFile = getClass().getClassLoader().getResourceAsStream("implicatives3.txt");
+			inputReader = new InputStreamReader(implFile, "UTF-8");
 			//File implFile = new File(classLoader.getResource("implicatives3.txt").getFile());
-			br = new BufferedReader(new InputStreamReader(implFile, "UTF-8"));
+			br = new BufferedReader(inputReader);
 		} catch (UnsupportedEncodingException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -104,10 +95,13 @@ public class ContextMapper implements Serializable {
 					mapOfImpl.put(word+comple,sign);
 				}		
 			}
+			br.close();
+			inputReader.close();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		
 	
 	}
 
@@ -116,12 +110,15 @@ public class ContextMapper implements Serializable {
 	 * @throws IOException 
 	 */
 	public void integrateAllContexts(){
+		//graph.displayRoles();
+		//graph.displayDependencies();
 		integrateImplicativeContexts();
 		//graph.displayContexts();
 		integrateCoordinatingContexts();
 		//graph.displayContexts();
 		integrateNegativeContexts();
 		integrateModalContexts();
+		//integrateHypotheticalContexts();
 		//graph.displayContexts();
 		if (coord == false)
 			checkForPostIntegrationMistakes();
@@ -374,7 +371,7 @@ public class ContextMapper implements Serializable {
 		// check this only if the interrogative var is set to false: if it is already true, it means there is a direct question and we dont need this step 
 		for (SemanticNode<?> rNode : rNodes){
 			SemanticNode<?> child = null;
-			if (rNode instanceof SkolemNode && DepGraphToSemanticGraph.interrogative == false && interrVerbs.contains(((SkolemNodeContent) rNode.getContent()).getStem())){
+			if (rNode instanceof SkolemNode && this.interrogative == false && interrVerbs.contains(((SkolemNodeContent) rNode.getContent()).getStem())){
 				Set<SemanticEdge> childrenEdges = roleGraph.getOutEdges(rNode);
 				// get the children of that node: the sem_comp child is the one that is in the interrogative context 
 				for (SemanticEdge e : childrenEdges){
@@ -389,11 +386,11 @@ public class ContextMapper implements Serializable {
 					ctxFinish = conGraph.getInNeighbors(child).iterator().next(); // othwerise, get the existing one
 				// add the self node of the start
 				ctxStart = addSelfContextNodeAndEdgeToGraph(rNode);
-				DepGraphToSemanticGraph.interrogative = true;
+				this.interrogative = true;
 			}
 		}
 		// do the following if the interrogative var is set to true
-		if (DepGraphToSemanticGraph.interrogative == true){
+		if (this.interrogative == true){
 			// if the above hasnt been executed, then we have a direct question and we still need to figure out the interrogative ctx
 			if (ctxFinish == null){
 				for (SemanticNode<?> ctxN : conGraph.getNodes()){
@@ -524,6 +521,15 @@ public class ContextMapper implements Serializable {
 		SemanticNode<?> ctxHead = null;
 		// get the dep head
 		SemanticNode<?> depHead = depGraph.getInNeighbors(node).iterator().next();
+		// check to see if it is a copula verb being negated, e.g. The man is not beautiful.
+		// in this case, the negated term ("beautiful") should be handled as a verb for 
+		// finding the head variable of the negated node
+		boolean negOnCopula = false;
+		for (SemanticEdge outEdge : depGraph.getOutEdges(depHead)) {
+			if (outEdge.getLabel().equals("cop")){
+				negOnCopula = true;
+			}
+		}
 		//If we have verbal coordination, then the combined node of the two predicates has to be negated
 		if (coordCtxs.containsKey(depHead) && coordCtxs.get(depHead).equals("verbal")){
 			// find the role head of this dep head
@@ -581,7 +587,7 @@ public class ContextMapper implements Serializable {
 			} else {
 				// create the self node of the negation
 				negNode = addSelfContextNodeAndEdgeToGraph(node);
-				if (!verbalForms.contains(((SkolemNodeContent) depHead.getContent()).getPosTag())){
+				if (!verbalForms.contains(((SkolemNodeContent) depHead.getContent()).getPosTag()) && negOnCopula == false ){
 					SemanticNode<?> headOfHead = depGraph.getInNeighbors(depHead).iterator().next();
 					head = headOfHead;
 				} else {
@@ -595,7 +601,7 @@ public class ContextMapper implements Serializable {
 			// create the self node of the negation
 			negNode = addSelfContextNodeAndEdgeToGraph(node);
 			// first if to deal with none negation
-			if (!verbalForms.contains(((SkolemNodeContent) depHead.getContent()).getPosTag())){
+			if (!verbalForms.contains(((SkolemNodeContent) depHead.getContent()).getPosTag()) && negOnCopula == false){
 				SemanticNode<?> headOfHead = depGraph.getInNeighbors(depHead).iterator().next();
 				head = headOfHead;
 			} else {				
@@ -1051,9 +1057,33 @@ public class ContextMapper implements Serializable {
 				SemanticNode<?> combNode = graph.getRoleGraph().getInNeighbors(start).iterator().next(); 
 				ContextHeadEdge combEdge1 = new ContextHeadEdge(GraphLabels.CONTEXT_HEAD, new  RoleEdgeContent());
 				ContextHeadEdge combEdge2 = new ContextHeadEdge(GraphLabels.CONTEXT_HEAD, new  RoleEdgeContent());
-				SemanticNode<?> ctxOfCombNode = new ContextNode("ctx("+combNode.getLabel()+")", new ContextNodeContent());
-				graph.addContextEdge(combEdge1, ctxOfCombNode, start);
-				graph.addContextEdge(combEdge2, ctxOfCombNode, finish);
+				String labelOfNode = "ctx("+combNode.getLabel()+")";
+				// make sure you add the combined node only once
+				SemanticNode<?> ctxOfCombNode = null;
+				for (SemanticNode<?> ctxNode : graph.getContextGraph().getNodes()){
+					if (ctxNode.getLabel().equals(labelOfNode)){
+						ctxOfCombNode = ctxNode;
+					}
+				}
+				if (ctxOfCombNode == null)
+					ctxOfCombNode = new ContextNode(labelOfNode, new ContextNodeContent());
+				
+				// make sure we add each edge only once
+				boolean foundCombEdge1 = false;
+				boolean foundCombEdge2 = false;
+				for (SemanticEdge ctxEdge : graph.getContextGraph().getEdges()){
+					if (ctxEdge.getLabel().equals(combEdge1.getLabel()) && ctxEdge.getDestVertexId().equals(start.getLabel()) && ctxEdge.getSourceVertexId().equals(ctxOfCombNode.getLabel())){
+						foundCombEdge1 = true;
+					}
+					if (ctxEdge.getLabel().equals(combEdge2.getLabel()) && ctxEdge.getDestVertexId().equals(finish.getLabel()) && ctxEdge.getSourceVertexId().equals(ctxOfCombNode.getLabel())){
+						foundCombEdge2 = true;
+					}
+				}
+				if (foundCombEdge1 == false)
+					graph.addContextEdge(combEdge1, ctxOfCombNode, start);
+				if (foundCombEdge2 == false)
+					graph.addContextEdge(combEdge2, ctxOfCombNode, finish);
+				
 				verbCoord = true;
 				// again, put everything int he hash. If the "start" verb is already in the hash and has the value "clausal"
 				// then add it again with the type "verbal". The type "verbal" is then the main one for this verb.  
@@ -1156,7 +1186,7 @@ public class ContextMapper implements Serializable {
 					}
 					// there are cases where there is a comp but it is not introduced by that, e.g. Max believes John loves Mary.
 					if (!comple.equals("_that")){
-						comple = "_other";
+						comple = "_that";
 					}
 					break;
 				}
@@ -1238,6 +1268,39 @@ public class ContextMapper implements Serializable {
 						}
 					}
 				}	
+			}
+		}
+	}
+	
+	private void integrateHypotheticalContexts(){
+		for (SemanticEdge edge : depGraph.getEdges()){
+			if (edge.getLabel().equals("advcl:if")){
+				SemanticNode<?> startNode = graph.getStartNode(edge);
+				SemanticNode<?> finishNode = graph.getFinishNode(edge);
+				String stringCtxOfStartNode =  ((SkolemNodeContent) startNode.getContent()).getContext();
+				String stringCtxOfFinishNode =  ((SkolemNodeContent) finishNode.getContent()).getContext();
+				SemanticNode<?> ctxOfStartNode = null;
+				SemanticNode<?> ctxOfFinishNode = null;
+				for (SemanticNode<?> ctxNode : graph.getContextGraph().getNodes()){
+					if (ctxNode.getLabel().equals(stringCtxOfStartNode)){
+						ctxOfStartNode = ctxNode;
+					}
+					else if (ctxNode.getLabel().equals(stringCtxOfFinishNode)){
+						ctxOfFinishNode = ctxNode;
+					}
+				}
+				if (ctxOfStartNode == null){
+					ctxOfStartNode = addSelfContextNodeAndEdgeToGraph(startNode);
+					
+				}
+				if (ctxOfFinishNode == null){
+					ctxOfFinishNode = addSelfContextNodeAndEdgeToGraph(finishNode);
+					
+				}
+				ContextHeadEdge verEdge = new ContextHeadEdge(GraphLabels.VER, new  RoleEdgeContent());
+				graph.addContextEdge(verEdge,ctxOfFinishNode, ctxOfStartNode);	
+			
+				
 			}
 		}
 	}

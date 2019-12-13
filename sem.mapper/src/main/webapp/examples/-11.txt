@@ -1,0 +1,376 @@
+<mxGraphModel>
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+    <mxCell id="2" parent="1" style="defaultVertex;fillColor=#bce7fd" value="Kidman_2" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell id="3" parent="1" style="defaultVertex;fillColor=#bce7fd" value="Nicole_1" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="4" parent="1" source="2" target="3" value="cmp">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="5" parent="1" style="defaultVertex;fillColor=#bce7fd" value="win_7" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="6" parent="1" source="5" target="2" value="sem_subj">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="7" parent="1" style="defaultVertex;fillColor=#bce7fd" value="actress_5" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="8" parent="1" source="2" target="7" value="nmod">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="9" parent="1" style="defaultVertex;fillColor=#bce7fd" value="oscar_9" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="10" parent="1" source="5" target="9" value="sem_obj">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+  </root>
+</mxGraphModel>
+
+
+<mxGraphModel>
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+    <mxCell id="2" parent="1" style="defaultVertex;fillColor=#bce7fd" value="win_7" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell id="3" parent="1" style="defaultVertex;fillColor=#bce7fd" value="Kidman_2" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="4" parent="1" source="2" target="3" value="nsubj">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="5" parent="1" style="defaultVertex;fillColor=#bce7fd" value="Nicole_1" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="6" parent="1" source="3" target="5" value="compound">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="7" parent="1" style="defaultVertex;fillColor=#bce7fd" value=",_3" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="8" parent="1" source="3" target="7" value="punct">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="9" parent="1" style="defaultVertex;fillColor=#bce7fd" value="actress_5" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="10" parent="1" source="3" target="9" value="appos">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="11" parent="1" style="defaultVertex;fillColor=#bce7fd" value="the_4" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="12" parent="1" source="9" target="11" value="det">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="13" parent="1" style="defaultVertex;fillColor=#bce7fd" value=",_6" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="14" parent="1" source="3" target="13" value="punct">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="15" parent="1" style="defaultVertex;fillColor=#bce7fd" value="oscar_9" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="16" parent="1" source="2" target="15" value="dobj">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="17" parent="1" style="defaultVertex;fillColor=#bce7fd" value="the_8" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="18" parent="1" source="15" target="17" value="det">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+  </root>
+</mxGraphModel>
+
+
+<mxGraphModel>
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+    <mxCell id="2" parent="1" style="defaultVertex;fillColor=#b3b5b8" value="top" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell id="3" parent="1" style="defaultVertex;fillColor=#bce7fd" value="win_7" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="4" parent="1" source="2" target="3" value="ctx_hd">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+  </root>
+</mxGraphModel>
+
+
+<mxGraphModel>
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+    <mxCell id="2" parent="1" style="defaultVertex;fillColor=#bce7fd" value="Kidman_2" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell id="3" parent="1" style="defaultVertex;fillColor=#bce7fd" value="Nicole_1" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="4" parent="1" source="2" target="3" value="cmp">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="5" parent="1" style="defaultVertex;fillColor=#bce7fd" value="win_7" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="6" parent="1" source="5" target="2" value="sem_subj">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="7" parent="1" style="defaultVertex;fillColor=#bce7fd" value="actress_5" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="8" parent="1" source="2" target="7" value="nmod">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="9" parent="1" style="defaultVertex;fillColor=#bce7fd" value="oscar_9" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="10" parent="1" source="5" target="9" value="sem_obj">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="11" parent="1" style="defaultVertex;fillColor=#B2B2FF" value="past" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="12" parent="1" source="5" target="11" value="tense">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="13" parent="1" style="defaultVertex;fillColor=#B2B2FF" value="not progressive" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="14" parent="1" source="5" target="13" value="aspect">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="15" parent="1" style="defaultVertex;fillColor=#B2B2FF" value="sg" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="16" parent="1" source="2" target="15" value="cardinal">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="17" parent="1" style="defaultVertex;fillColor=#B2B2FF" value="proper" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="18" parent="1" source="2" target="17" value="name">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell edge="1" id="19" parent="1" source="3" target="15" value="cardinal">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell edge="1" id="20" parent="1" source="3" target="17" value="name">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell edge="1" id="21" parent="1" source="7" target="15" value="cardinal">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="22" parent="1" style="defaultVertex;fillColor=#B2B2FF" value="common" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="23" parent="1" source="7" target="22" value="name">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="24" parent="1" style="defaultVertex;fillColor=#B2B2FF" value="the" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="25" parent="1" source="7" target="24" value="specifier">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell edge="1" id="26" parent="1" source="9" target="15" value="cardinal">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell edge="1" id="27" parent="1" source="9" target="22" value="name">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell edge="1" id="28" parent="1" source="9" target="24" value="specifier">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+  </root>
+</mxGraphModel>
+
+
+<mxGraphModel>
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+    <mxCell id="2" parent="1" style="defaultVertex;fillColor=#bce7fd" value="Kidman_2" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell id="3" parent="1" style="defaultVertex;fillColor=#bce7fd" value="Nicole_1" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="4" parent="1" source="2" target="3" value="cmp">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="5" parent="1" style="defaultVertex;fillColor=#bce7fd" value="win_7" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="6" parent="1" source="5" target="2" value="sem_subj">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="7" parent="1" style="defaultVertex;fillColor=#bce7fd" value="actress_5" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="8" parent="1" source="2" target="7" value="nmod">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="9" parent="1" style="defaultVertex;fillColor=#bce7fd" value="oscar_9" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="10" parent="1" source="5" target="9" value="sem_obj">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="11" parent="1" style="defaultVertex;fillColor=#FF4C4C" value="00000000" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="12" parent="1" source="2" target="11" value="lex">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell edge="1" id="13" parent="1" source="3" target="11" value="lex">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="14" parent="1" style="defaultVertex;fillColor=#FF4C4C" value="01100145" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="15" parent="1" source="5" target="14" value="lex">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="16" parent="1" style="defaultVertex;fillColor=#FF4C4C" value="01111028" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="17" parent="1" source="5" target="16" value="lex">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="18" parent="1" style="defaultVertex;fillColor=#FF4C4C" value="02288295" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="19" parent="1" source="5" target="18" value="lex">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="20" parent="1" style="defaultVertex;fillColor=#FF4C4C" value="02524171" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="21" parent="1" source="5" target="20" value="lex">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="22" parent="1" style="defaultVertex;fillColor=#FF4C4C" value="09767700" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="23" parent="1" source="7" target="22" value="lex">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="24" parent="1" style="defaultVertex;fillColor=#FF4C4C" value="07268967" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="25" parent="1" source="9" target="24" value="lex">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+  </root>
+</mxGraphModel>
+
+
+<mxGraphModel>
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+    <mxCell id="2" parent="1" style="defaultVertex;fillColor=#bce7fd" value="Kidman_2" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell id="3" parent="1" style="defaultVertex;fillColor=#bce7fd" value="actress_5" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="4" parent="1" source="2" target="3" value="appos_identical_to">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+  </root>
+</mxGraphModel>
+
+
+<mxGraphModel>
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+    <mxCell id="2" parent="1" style="defaultVertex;fillColor=#bce7fd" value="win_7" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell id="3" parent="1" style="defaultVertex;fillColor=#bce7fd" value="Kidman_2" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="4" parent="1" source="2" target="3" value="sem_subj">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="5" parent="1" style="defaultVertex;fillColor=#bce7fd" value="Nicole_1" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="6" parent="1" source="3" target="5" value="cmp">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="7" parent="1" style="defaultVertex;fillColor=#bce7fd" value="actress_5" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="8" parent="1" source="3" target="7" value="nmod">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="9" parent="1" style="defaultVertex;fillColor=#bce7fd" value="oscar_9" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="10" parent="1" source="2" target="9" value="sem_obj">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="11" parent="1" style="defaultVertex;fillColor=#b3b5b8" value="top" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="12" parent="1" source="11" target="2" value="ctx_hd">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+  </root>
+</mxGraphModel>
+
+
+<mxGraphModel>
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+    <mxCell id="2" parent="1" style="defaultVertex;fillColor=#bce7fd" value="win_7" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell id="3" parent="1" style="defaultVertex;fillColor=#bce7fd" value="Kidman_2" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="4" parent="1" source="2" target="3" value="sem_subj">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="5" parent="1" style="defaultVertex;fillColor=#bce7fd" value="Nicole_1" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="6" parent="1" source="3" target="5" value="cmp">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="7" parent="1" style="defaultVertex;fillColor=#bce7fd" value="actress_5" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="8" parent="1" source="3" target="7" value="nmod">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell id="9" parent="1" style="defaultVertex;fillColor=#bce7fd" value="oscar_9" vertex="1">
+      <mxGeometry as="geometry" height="30.0" width="80.0" x="20.0" y="20.0"/>
+    </mxCell>
+    <mxCell edge="1" id="10" parent="1" source="2" target="9" value="sem_obj">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+    <mxCell edge="1" id="11" parent="1" source="3" target="7" value="appos_identical_to">
+      <mxGeometry as="geometry" relative="1"/>
+    </mxCell>
+  </root>
+</mxGraphModel>
+
+

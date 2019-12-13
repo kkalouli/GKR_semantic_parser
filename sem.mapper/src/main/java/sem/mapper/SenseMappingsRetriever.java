@@ -23,17 +23,23 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Scanner;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
 import org.apache.commons.io.IOUtils;
-import org.deeplearning4j.models.embeddings.loader.WordVectorSerializer;
-import org.deeplearning4j.models.embeddings.wordvectors.WordVectors;
+//import org.deeplearning4j.models.embeddings.wordvectors.WordVectors;
 
+import com.robrua.nlp.bert.BasicTokenizer;
+import com.robrua.nlp.bert.Bert;
+import com.robrua.nlp.bert.FullTokenizer;
 
 import edu.mit.jwi.Dictionary;
 import edu.mit.jwi.IDictionary;
+import edu.mit.jwi.IRAMDictionary;
+import edu.mit.jwi.RAMDictionary;
+import edu.mit.jwi.data.ILoadPolicy;
 import edu.mit.jwi.item.IIndexWord;
 import edu.mit.jwi.item.ISynset;
 import edu.mit.jwi.item.ISynsetID;
@@ -51,29 +57,56 @@ import sem.graph.SemanticGraph;
 import sem.graph.vetypes.SkolemNode;
 
 
+
 public class SenseMappingsRetriever implements Serializable {
 	
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = -5353876989060718577L;
-	HashMap<String,String> hashOfPOS = new HashMap<String,String>();
-	public Map<String, Integer> subConcepts = new HashMap<String,Integer>();
-	public Map<String, Integer> superConcepts =new HashMap<String,Integer>();
-	public ArrayList<String> synonyms = new ArrayList<String>();
-	public ArrayList<String> hypernyms = new ArrayList<String>();
-	public ArrayList<String> hyponyms = new ArrayList<String>();
-	public ArrayList<String> antonyms = new ArrayList<String>();
-	public double[] embed = new double[300];
-	private JIGSAW jigsaw;
+	private HashMap<String,String> hashOfPOS;
+	private Map<String, Integer> subConcepts;
+	private Map<String, Integer> superConcepts;
+	private ArrayList<String> synonyms;
+	private ArrayList<String> hypernyms;
+	private ArrayList<String> hyponyms ;
+	private ArrayList<String> antonyms;
+	private String senseKey;
+	private float[] embed;
 	private Properties props;
 	private String wnInstall;
 	private String sumoInstall;
 	private String jigsawProps;
-	private WordVectors glove;
-	private Integer indexOfPunct;
+	//private WordVectors glove;
+	private Bert bert;
+	private HashMap<String,float[]> embedMap;
+	private JIGSAW jigsaw;
+	private FullTokenizer tokenizer;
+	private IRAMDictionary wnDict;
+	private String sumoContent;
+	private String bertVocab;
 	
-	public SenseMappingsRetriever(InputStream configFile){
+	/**
+	 * Constructor to be used when SenseMappingsRetriever is called from the InferenceComputer
+	 * (through DepGraphToSemanticGraph)
+	 * In this case, bert, bertTokenizer, the PWN Dict and the SUMo content are passed as parameters
+	 * so that they are not called every time a new sentence is parsed
+	 * @param configFile
+	 * @param bert
+	 * @param tokenizer
+	 * @param wnDict
+	 * @param sumoContent
+	 */
+	public SenseMappingsRetriever(InputStream configFile, Bert bert, FullTokenizer tokenizer, 
+			IRAMDictionary wnDict, String sumoContent){
+		this.hashOfPOS = new HashMap<String,String>();
+		this.subConcepts = new HashMap<String,Integer>();
+		this.superConcepts =new HashMap<String,Integer>();
+		this.synonyms = new ArrayList<String>();
+		this.hypernyms = new ArrayList<String>();
+		this.hyponyms = new ArrayList<String>();
+		this.antonyms = new ArrayList<String>();
+		this.senseKey = "";
 		/* fill hash with the POS tags of the Penn treebank. The POS
 		have to be matched to the generic POS used in SUMO and PWN.  */
 		hashOfPOS.put("JJ","ADJECTIVE");
@@ -94,8 +127,10 @@ public class SenseMappingsRetriever implements Serializable {
 		hashOfPOS.put("VBP","VERB");
 		hashOfPOS.put("VBZ","VERB");
 		this.props = new Properties();
+		InputStreamReader streamReader = new InputStreamReader(configFile);
 		try {
-			props.load(new InputStreamReader(configFile));
+			props.load(streamReader);
+			streamReader.close();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -103,16 +138,100 @@ public class SenseMappingsRetriever implements Serializable {
         this.wnInstall = props.getProperty("wn_location");
         this.sumoInstall = props.getProperty("sumo_location");
         this.jigsawProps = props.getProperty("jigsaw_props");
+        this.bert = bert;
+        this.tokenizer = tokenizer;
+        this.wnDict = wnDict;
+        this.sumoContent = sumoContent;
+		Logger.getLogger(JIGSAW.class.getName()).setLevel(Level.OFF);
 		this.jigsaw = new JIGSAW(new File(jigsawProps));
-		InputStream gloveFile = getClass().getClassLoader().getResourceAsStream("glove.6B.300d.txt");
+		// for glove embeddings
+		/*InputStream gloveFile = getClass().getClassLoader().getResourceAsStream("glove.6B.300d.txt");
 		try {
 			this.glove = WordVectorSerializer.readWord2VecModel(stream2file(gloveFile));
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}
+		}*/
+		this.embedMap = new HashMap<String,float[]>();
+		this.embed = new float[768];
 	}
 	
+	/**
+	 * Constructor to be used when SenseMappingsRetriever is simply called from DepGraphToSemanticgraph, only to
+	 * parse specific sentences (without inference). Then, all libs are initialized here.
+	 * @param configFile
+	 */
+	public SenseMappingsRetriever(InputStream configFile){
+		this.hashOfPOS = new HashMap<String,String>();
+		this.subConcepts = new HashMap<String,Integer>();
+		this.superConcepts =new HashMap<String,Integer>();
+		this.synonyms = new ArrayList<String>();
+		this.hypernyms = new ArrayList<String>();
+		this.hyponyms = new ArrayList<String>();
+		this.antonyms = new ArrayList<String>();
+		this.senseKey = "";
+		/* fill hash with the POS tags of the Penn treebank. The POS
+		have to be matched to the generic POS used in SUMO and PWN.  */
+		hashOfPOS.put("JJ","ADJECTIVE");
+		hashOfPOS.put("JJR","ADJECTIVE");
+		hashOfPOS.put("JJS","ADJECTIVE");
+		hashOfPOS.put("MD","VERB");
+		hashOfPOS.put("NN","NOUN");
+		hashOfPOS.put("NNP","NOUN");
+		hashOfPOS.put("NNPS","NOUN");
+		hashOfPOS.put("NNS","NOUN");
+		hashOfPOS.put("RB","ADVERB");
+		hashOfPOS.put("RBR","ADVERB");
+		hashOfPOS.put("RBS","ADVERB");
+		hashOfPOS.put("VB","VERB");
+		hashOfPOS.put("VBD","VERB");
+		hashOfPOS.put("VBG","VERB");
+		hashOfPOS.put("VBN","VERB");
+		hashOfPOS.put("VBP","VERB");
+		hashOfPOS.put("VBZ","VERB");
+		this.props = new Properties();
+		InputStreamReader streamReader = new InputStreamReader(configFile);
+		try {
+			props.load(streamReader);
+			streamReader.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+        this.wnInstall = props.getProperty("wn_location");
+        this.sumoInstall = props.getProperty("sumo_location");
+        this.jigsawProps = props.getProperty("jigsaw_props");
+        this.bertVocab = props.getProperty("bert_vocab");
+        this.bert = Bert.load("com/robrua/nlp/easy-bert/bert-uncased-L-12-H-768-A-12");
+        Logger.getLogger(JIGSAW.class.getName()).setLevel(Level.OFF);
+		this.jigsaw = new JIGSAW(new File(jigsawProps));	
+		this.tokenizer = new FullTokenizer(new File(bertVocab), true);
+		this.wnDict = new RAMDictionary(new File(wnInstall), ILoadPolicy.NO_LOAD);
+		try {
+			this.wnDict.open();
+			this.wnDict.load();
+			Scanner scanner = new Scanner(new File(sumoInstall), "UTF-8");
+			this.sumoContent = scanner.useDelimiter("\\A").next();
+			scanner.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		// for glove embeddings
+		/*InputStream gloveFile = getClass().getClassLoader().getResourceAsStream("glove.6B.300d.txt");
+		try {
+			this.glove = WordVectorSerializer.readWord2VecModel(stream2file(gloveFile));
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}*/
+		this.embedMap = new HashMap<String,float[]>();
+		this.embed = new float[768];
+	}
+	
+	
+
 	
     public static File stream2file (InputStream in) throws IOException {
         final File tempFile = File.createTempFile("stream2file.", ".txt");
@@ -124,12 +243,20 @@ public class SenseMappingsRetriever implements Serializable {
     }
 	
 	
-	public double[] getEmbed() {
+	public float[] getEmbed() {
 		return embed;
 	}
 
-	public void setEmbed(double[] embed) {
+	public void setEmbed(float[] embed) {
 		this.embed = embed;
+	}
+	
+	public String getSenseKey() {
+		return senseKey;
+	}
+
+	public void setSenseKey(String senseKey) {
+		this.senseKey = senseKey;
 	}
 	
 	/**
@@ -208,18 +335,13 @@ public class SenseMappingsRetriever implements Serializable {
 	 */
 	public ArrayList<String> accessPWNDBAndExtractSenses(String lemma, String posInitial) throws IOException {
 		ArrayList<String> listOfSenses = new ArrayList<String>();
-		// constructs the URL to the Wordnet dictionary directory
-		URL url = new URL("file", null, wnInstall);	
-		// constructs the dictionary object and opens it
-		IDictionary dict = new Dictionary(url);
-		dict.open ();
 		// get the word within PWN
-		IIndexWord idxWord = dict.getIndexWord(lemma, POS.valueOf(hashOfPOS.get(posInitial)));
+		IIndexWord idxWord = wnDict.getIndexWord(lemma, POS.valueOf(hashOfPOS.get(posInitial)));
 		// if the word is found,
 		if (idxWord != null) {
 			// get all its synsets
 		    for (IWordID wordID : idxWord.getWordIDs()){
-		    	IWord word = dict.getWord (wordID);
+		    	IWord word = wnDict.getWord (wordID);
 		    	ISynset synset = word.getSynset();
 		    	// get gloss and example 
 		    	String glossAndEx = synset.getGloss();
@@ -242,7 +364,7 @@ public class SenseMappingsRetriever implements Serializable {
 			listOfSenses = null;
 		}
 	    
-		dict.close();
+		//dict.close();
 	    return listOfSenses;		
 	}
 	
@@ -254,23 +376,19 @@ public class SenseMappingsRetriever implements Serializable {
 	 * @throws IOException
 	 */
 	public void getLexRelationsOfSynset(String lemma, String synsetID, String pos) throws IOException {
-		// constructs the URL to the Wordnet dictionary directory
-		URL url = new URL("file", null, wnInstall);	
-		// constructs the dictionary object and opens it
-		IDictionary dict = new Dictionary(url);
-		dict.open ();
 		IIndexWord idxWord = null;
 		if (hashOfPOS.containsKey(pos))
 			// look up the given word within dict
-			idxWord = dict.getIndexWord (lemma, POS.valueOf(hashOfPOS.get(pos)));
+			idxWord = wnDict.getIndexWord (lemma, POS.valueOf(hashOfPOS.get(pos)));
 		// if the word is found:
 		if (idxWord != null) {
 			List<IWordID> wordIDs = idxWord.getWordIDs();
 			for (IWordID id : wordIDs){
 				// from all ids (=synsets) only take the one that is the same as the specified synset
 				if (id.getSynsetID().toString().substring(4,id.getSynsetID().toString().lastIndexOf("-")).equals(synsetID)){
-					IWord word = dict.getWord(id);
+					IWord word = wnDict.getWord(id);
 					ISynset synset = word.getSynset();
+					senseKey = word.getSenseKey().toString();
 					// iterate over words associated with the synset and get the synonyms
 					for(IWord w : synset.getWords()){
 						synonyms.add(w.getLemma());
@@ -278,7 +396,7 @@ public class SenseMappingsRetriever implements Serializable {
 					// get the hypernyms
 					for(ISynsetID sid : synset.getRelatedSynsets(Pointer.HYPERNYM)){
 						List <IWord > words ;
-				    	words = dict.getSynset(sid).getWords();
+				    	words = wnDict.getSynset(sid).getWords();
 				    	for(Iterator<IWord>i = words.iterator(); i.hasNext() ;) {
 				    		hypernyms.add(i.next().getLemma());
 				    	 }
@@ -286,7 +404,7 @@ public class SenseMappingsRetriever implements Serializable {
 					// get the hyponyms
 					for(ISynsetID sid : synset.getRelatedSynsets(Pointer.HYPONYM)){
 						List <IWord > words ;
-				    	words = dict.getSynset(sid).getWords();
+				    	words = wnDict.getSynset(sid).getWords();
 				    	for(Iterator<IWord>i = words.iterator(); i.hasNext() ;) {
 				    		hyponyms.add(i.next().getLemma());
 				    	 }
@@ -294,15 +412,13 @@ public class SenseMappingsRetriever implements Serializable {
 					/* get the antonyms (for the lexical relations we need the method getRelatedWords
 					instead of getRelatedSynsets() */
 					for(IWordID w : word.getRelatedWords(Pointer.ANTONYM)){
-						IWord anto = dict.getWord(w);		
+						IWord anto = wnDict.getWord(w);		
 						antonyms.add(anto.getLemma());
 					}
 					break;
 				}
 			}
 		} 
-		
-		dict.close();	
 	}
 	
 	/** 
@@ -346,7 +462,7 @@ public class SenseMappingsRetriever implements Serializable {
 		
 		if (!matched.equals("")) {
 			if (matched.contains("&%")){
-				senseToReturn = matched.substring(matched.indexOf("&%")+2); //+2
+				senseToReturn = matched.substring(matched.lastIndexOf("&%")+2); //+2
 			} 
 			if (matched.contains("@") && matched.indexOf("@") != matched.length()-1 && matched.contains("|")){
 				String hypernymsStr = matched.substring(matched.indexOf("@")+1,matched.indexOf("|"));
@@ -380,21 +496,10 @@ public class SenseMappingsRetriever implements Serializable {
 	
 	private String getSumoFileMatchedSense(String synset,String sumo){
 		String senseMatched = "";
-		// read the file into a string
-		Scanner scanner;
-		try {
-			scanner = new Scanner(new File(sumo), "UTF-8");
-			String content = scanner.useDelimiter("\\A").next();
-			// match the given synset
-			Pattern sensePattern = Pattern.compile("\n"+synset+".*");
-			Matcher senseMatcher = sensePattern.matcher(content);
-			scanner.close();
-			if (senseMatcher.find())
-				senseMatched = senseMatcher.group();
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}		
+		Pattern sensePattern = Pattern.compile("\n"+synset+".*");
+		Matcher senseMatcher = sensePattern.matcher(sumoContent);
+		if (senseMatcher.find())
+			senseMatched = senseMatcher.group();	
 		return senseMatched;
 	}
 	
@@ -411,33 +516,12 @@ public class SenseMappingsRetriever implements Serializable {
 	public HashMap <String, Map<String,Float>> disambiguateSensesWithJIGSAW(String wholeCtx){
 		HashMap <String, String> listOfSenses = new HashMap<String,String>();
 		HashMap <String, Map<String,Float>> mapOfSensesSorted = new HashMap<String,Map<String,Float>>();
-		// create a file containing the sentence to be tokenized
-		String inString = "untokenized.tmp";
-		BufferedWriter writer;
 		try {
-			writer = new BufferedWriter(new FileWriter(inString));
-			writer.write(wholeCtx);
-			writer.close();
-			// create a file where the tokenized sentence will be written
-			String tmpTokenized= "tokenized.tmp";
-			PrintWriter writerTokenizer = new PrintWriter(tmpTokenized, "UTF-8");
-			PTBTokenizer<CoreLabel> ptbt = new PTBTokenizer<>(new FileReader(new File(inString)), new CoreLabelTokenFactory(), "");
-		    // tokenize
-			while (ptbt.hasNext()) {
-		        CoreLabel label = ptbt.next();
-		        writerTokenizer.write(label.toString()+"\n");
-		      }
-			writerTokenizer.close();	
-			// run the disambiguation
 		   TokenGroup tg = null;
-	       BufferedReader in = new BufferedReader(new FileReader(tmpTokenized));
-	       List<String> list = new ArrayList<String>();
-	       while (in.ready()) {
-	    	   list.add(in.readLine());
-	       }
-	       in.close();
+	       BasicTokenizer tokenizer = new BasicTokenizer(true);
+	       String[] tokens = tokenizer.tokenize(wholeCtx);
 	       // write each disambiguated sense to the hashmap
-	       tg = jigsaw.mapText(list.toArray(new String[list.size()]));
+	       tg = jigsaw.mapText(tokens);
 	       for (int i = 0; i < tg.size(); i++) {
 	           listOfSenses.put(Integer.toString(i)+"_"+tg.get(i).getToken(),tg.get(i).getSyn());
 	       }
@@ -470,7 +554,7 @@ public class SenseMappingsRetriever implements Serializable {
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}	    
+		}	   
        return mapOfSensesSorted;
 	}
 
@@ -484,25 +568,27 @@ public class SenseMappingsRetriever implements Serializable {
 	 * @param retriever
 	 * @return
 	 */
-	public HashMap<String, String> mapNodeToSenseAndConcept(SkolemNode node, SemanticGraph graph,HashMap <String, Map<String,Float>> senses){
-		HashMap<String,String> lexSem = new HashMap<String,String>();
+	public HashMap<String, Map<String, Float>> mapNodeToSenseAndConcept(SkolemNode node, SemanticGraph graph,HashMap <String, Map<String,Float>> senses){
+		HashMap<String,Map<String,Float>> lexSem = new HashMap<String,Map<String,Float>>();
 		int positionOfNode = node.getPosition();
-		String keyToGet = Integer.toString(positionOfNode-1) + "_" + node.getSurface();
+		String keyToGet = Integer.toString(positionOfNode-1) + "_" + node.getSurface().toLowerCase();
 		Map<String,Float> senseProp = senses.get(keyToGet);
 		//String sense = "";
 		String concept = "";
-			
+				
 		if (senseProp != null && !senseProp.isEmpty()){
 			int length = senseProp.keySet().toArray().length;
 			if (senseProp.keySet().toArray().length >5)
 				length = 5;
+			// only take the first 5 best senses
 			for (int i= 0; i< length; i++){
 				String sense = (String) senseProp.keySet().toArray()[i];
-				concept = extractSUMOMappingFromSUMO(sense, ((SkolemNode) node).getPartOfSpeech());
-				lexSem.put(sense,concept);
-			}
-			//sense = (String) senseProp.keySet().toArray()[0];
-			
+				concept = extractSUMOMappingFromSUMO(sense, ((SkolemNode) node).getPartOfSpeech());	
+				// map to hold the concept and the score associated with that sense
+				Map<String,Float> conceptAndScore = new HashMap<String,Float>();
+				conceptAndScore.put(concept, senseProp.get(sense));
+				lexSem.put(sense,conceptAndScore);
+			}			
 		}				
 
 		
@@ -517,8 +603,11 @@ public class SenseMappingsRetriever implements Serializable {
 					ArrayList<String> compSenses = accessPWNDBAndExtractSenses(compound,pos);
 					if (compSenses != null && !compSenses.isEmpty()){
 						String sense = compSenses.get(0).substring(4, compSenses.get(0).lastIndexOf("-"));		
-						concept = extractSUMOMappingFromSUMO(sense, ((SkolemNode) node).getPartOfSpeech());				
-						lexSem.put("cmp_"+sense,concept);
+						concept = extractSUMOMappingFromSUMO(sense, ((SkolemNode) node).getPartOfSpeech());	
+						// map to hold the concept and the score associated with that sense
+						Map<String,Float> conceptAndScore = new HashMap<String,Float>();
+						conceptAndScore.put(concept, (float) 1);		
+						lexSem.put("cmp_"+sense,conceptAndScore);
 					}
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
@@ -530,11 +619,74 @@ public class SenseMappingsRetriever implements Serializable {
 	}
 
 	
-	
-	public void mapNodeToEmbed(SkolemNode node){
+	/***
+	 * Sets the embedding matching to the given node. Uses the glove embeddings: not used for now.
+	 * @param wholeCtx
+	 */
+	/*public void mapNodeToEmbed(SkolemNode node){
 		String lemma = node.getStem();
-        double[] wordVector = glove.getWordVector(lemma);
+		double[] wordVector = glove.getWordVector(lemma);
         this.embed = wordVector;
+	}*/
+		
+	/**
+	 * Matches the original tokens (each word) to the token assumed from BERT after applying wordpiece tokenization.
+	 * @param originalTokens
+	 * @return
+	 */
+	public HashMap<String,Integer> matchOriginalTokens2BERTTokens(String[] originalTokens ){
+		ArrayList<String> bertTokens = new ArrayList<String>();
+		HashMap<String,Integer> orig2TokenMap = new HashMap<String,Integer>();
+		// bert tokens start with CLS
+		bertTokens.add("CLS");
+		// counter for position of each token in the sentence
+		int i = 1;
+		// go through the original tokens
+		for (String origToken :originalTokens ){
+			// bertTokens.size() always corresponds to the "hops" that were made from the previous bert token to this one
+			orig2TokenMap.put(origToken+"_"+i,bertTokens.size());
+			// tokenize the current original token with the wordpiece tokenizer
+			String[] tokToken = tokenizer.tokenize(origToken);
+			// add each of those new tokens to the bertTokens, so that the latter increases its size
+			for (String tok : tokToken){
+				bertTokens.add(tok);	
+			}
+			i++;
+		}
+		// bert tokens end with SEP
+		bertTokens.add("SEP");
+		return orig2TokenMap;
+	}
+	
+	/**
+	 * Maps the whole context (2 sentences) to a sequence embedding with BERT. The resulting embedding of each
+	 * sentence is a float[128][768] no matter the length of the sentence. There is a standard length of 128 
+	 * per sentence. For this reason, we need a "decoder" which "decodes" back the exact embedding that matches to
+	 * each token of the sentence (due to no one-to-one relation) 
+	 * @param wholeCtx
+	 */
+	public void getEmbedForWholeCtx(String wholeCtx){
+		String[] splitCtx = wholeCtx.split("(?<=(\\.|\\?|!))\\s");
+		String str1 = splitCtx[0];
+		//create a basic BERT tokenizer to tokenize the first sentence of the wholeCtx (first sent = current sent)
+		BasicTokenizer tokenizer = new BasicTokenizer(true);
+		String[] plainlyTokenizedSent = tokenizer.tokenize(str1);
+		// match each of those original tokens to a token in the bert 128 sequence 
+		HashMap<String,Integer> orig2TokenMap  = matchOriginalTokens2BERTTokens(plainlyTokenizedSent);
+		// get the BERT sequence
+		float[][] bertSeq = bert.embedTokens(str1);
+		// match each original token to a specifc vector of the BERT sequence
+		for (String key : orig2TokenMap.keySet()){
+			this.embedMap.put(key,bertSeq[orig2TokenMap.get(key)]);
+		}
+	}
+	
+	/**
+	 * Extracts the specific embedding of the given node from the BERT sequence embedding.
+	 * @param node
+	 */
+	public void extractNodeEmbedFromSequenceEmbed(SkolemNode node){
+		this.embed = this.embedMap.get(node.getSurface()+"_"+node.getPosition());
 	}
 
 }

@@ -1,21 +1,15 @@
 package sem.mapper;
 
-import java.awt.List;
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
 import sem.graph.SemGraph;
-import sem.graph.SemJGraphT;
 import sem.graph.SemanticEdge;
-import sem.graph.SemanticGraph;
 import sem.graph.SemanticNode;
-import sem.graph.vetypes.ContextNode;
-import sem.graph.vetypes.ContextNodeContent;
 import sem.graph.vetypes.GraphLabels;
 import sem.graph.vetypes.RoleEdge;
 import sem.graph.vetypes.RoleEdgeContent;
@@ -134,6 +128,7 @@ public class RolesMapper implements Serializable {
 			integratePlainEdges();
 			edgesToAdd.clear();
 			combEdges.clear();
+			//graph.displayRoles();
 			//}
 			// if there is clausal coord, add the seperate sentences to the graphs and set all
 			// other variables to false. Then rerun this method for these new graphs. 
@@ -152,7 +147,7 @@ public class RolesMapper implements Serializable {
 		// make sure that the role graph has a subject in the case of an imperative verb .
 		// first case: role graph is completely empty (intransitive imperative)
 		// second case: only asubject is missing (transitive imperative)
-		if ((graph.getRoleGraph().getNodes().isEmpty() || foundSubj == false) && passivePerm == true){
+		if ((graph.getRoleGraph().getNodes().isEmpty() || foundSubj == false) && passivePerm == false){
 			RoleEdge roleEdge = new RoleEdge(GraphLabels.SUBJ, new RoleEdgeContent());
 			SkolemNodeContent subjNodeContent = new SkolemNodeContent();
 			subjNodeContent.setSurface("you");
@@ -350,10 +345,11 @@ public class RolesMapper implements Serializable {
 			if (!listOfSubNodes.contains(graph.getFinishNode(subEdge)))
 				listOfSubNodes.add(graph.getFinishNode(subEdge));
 			if (!traversedEdges.contains(subEdge)){
+				traversedEdges.add(subEdge);
 				// do the same for the finish node of the current edge (recursively so that children of children are also added)
 				createSubgraph(graph.getFinishNode(subEdge), nodeToExclude, listOfSubEdges, listOfSubNodes);
 			}
-			traversedEdges.add(subEdge);
+			//traversedEdges.add(subEdge);
 		}
 		// create the subgraph
 		return graph.getSubGraph(listOfSubNodes, listOfSubEdges);
@@ -462,7 +458,7 @@ public class RolesMapper implements Serializable {
 		String role = "";
 	
 		// only go here if there is coordination in the current edge 
-		if (edgeLabel.contains("conj:") ){
+		if (edgeLabel.contains("cc:") || edgeLabel.contains("conj:") ){
 			// create the combined node of the coordinated terms and the edge of one of its children
 			if (graph.getRoleGraph().getEdges(start, finish).isEmpty() ){//!graph.getRoleGraph().containsNode(start) && !graph.getRoleGraph().containsNode(finish)  ){
 				TermNode combNode = new TermNode(start+"_"+edgeLabel.substring(5)+"_"+finish, new TermNodeContent());
@@ -486,12 +482,13 @@ public class RolesMapper implements Serializable {
 	 * Check if there is more than double coordination.e.g There is Abrams, Browne and Chiang.
 	 */
 	private void checkForMoreThanDoubleCoordination(){
+		//graph.displayRoles();
 		ArrayList<SemanticNode<?>> coordNodes = new ArrayList<SemanticNode<?>>();
 		ArrayList<SemanticNode<?>> termNodes = new ArrayList<SemanticNode<?>>();
 		// get through the role graph and see if there are any nodes that are coordinated 
 		for (SemanticNode<?> node : graph.getRoleGraph().getNodes()){
 			ArrayList<SemanticEdge> isElementEdges = new ArrayList<SemanticEdge>();
-			for (SemanticEdge edge : graph.getInEdges(node)){
+			for (SemanticEdge edge : graph.getOutEdges(node)){
 				if (edge.getLabel().equals("is_element") && graph.getStartNode(edge) instanceof TermNode){				
 					isElementEdges.add(edge);
 				}
@@ -507,9 +504,13 @@ public class RolesMapper implements Serializable {
 				}
 			}
 		}
+		// termNodes.size() == 1 to ensure it is really more than double coordination
+		// if it only double do not do anything further
+		if (termNodes.size() == 1 )
+			return;
 		String label = "";
 		String ele = "";
-		ArrayList<SemanticEdge> inEdges = new ArrayList<SemanticEdge>();
+		ArrayList<SemanticEdge> outEdges = new ArrayList<SemanticEdge>();
 		for (SemanticNode<?> node : termNodes){
 			String name = node.getLabel();
 			String[] partsOfName = name.split("_(?=(and|or))");
@@ -518,26 +519,35 @@ public class RolesMapper implements Serializable {
 			ele = partsOfName[1].substring(0,partsOfName[1].indexOf("_"));
 			label += "_"+ele+"_";
 			label += partsOfName[1].substring(partsOfName[1].indexOf("_")+1);
-			if (!inEdges.containsAll(graph.getRoleGraph().getInEdges(node)))
-				inEdges.addAll(graph.getRoleGraph().getInEdges(node));
+			// get all children of the combined node to add them to the bigger combined node
+			for (SemanticEdge edge : graph.getRoleGraph().getOutEdges(node)){
+				if (!outEdges.contains(edge)){
+					outEdges.add(edge);
+				}
+			}
 		}
 		TermNode combNode = new TermNode(label, new TermNodeContent());
-		
-		for (SemanticEdge ed : inEdges){
+		ArrayList<SemanticNode<?>> combNodesToRemoveAfterAddingChildren = new ArrayList<SemanticNode<?>>();
+		for (SemanticEdge ed : outEdges){
 			SemanticNode<?> start = graph.getStartNode(ed);
 			SemanticNode<?> finish = graph.getFinishNode(ed);
 			RoleEdge roleEdge = new RoleEdge(ed.getLabel(), new RoleEdgeContent());
-			graph.addRoleEdge(roleEdge, start, combNode);
-			graph.removeRoleNode(finish);
-		}
-		
-		String role = GraphLabels.IS_ELEMENT;
-		for (SemanticNode<?> node : coordNodes){
-			if (graph.getRoleGraph().getEdges(combNode, node).isEmpty() ){
-				RoleEdge combEdge = new RoleEdge(role, new RoleEdgeContent());
-				graph.addRoleEdge(combEdge, combNode, node);
+			// only add the children of the combined nodes once 
+			boolean found = false;
+			for (SemanticEdge edge: graph.getRoleGraph().getEdges()){
+				if (edge.getLabel().equals(roleEdge.getLabel()) && edge.getDestVertexId().equals(finish.getLabel()) && edge.getSourceVertexId().equals(combNode.getLabel()) ){
+					found = true;
+				}				
 			}
-		}		
+			if (found == false)
+				graph.addRoleEdge(roleEdge, combNode, finish);
+			if (!combNodesToRemoveAfterAddingChildren.contains(start))
+				combNodesToRemoveAfterAddingChildren.add(start);	
+		}
+		// remove all double-combined nodes since they have been replaced by the third-combined 
+		for (SemanticNode<?> node : combNodesToRemoveAfterAddingChildren){
+			graph.removeRoleNode(node);
+		}
 	}
 
 	/**
@@ -590,33 +600,30 @@ public class RolesMapper implements Serializable {
 			foundSubj = true;
 		}	
 		break;
+		case "nmod:than" : role = GraphLabels.NMOD_COMP;
+		break;
 		case "nsubj:xsubj": role = GraphLabels.SUBJ;
 		foundSubj = true;
 		break;
-		case "amod": boolean found = false;
-		// if the word is already included in the property graph as a specifier (e.g. many, few, etc) dont add it here again
-			for (SemanticEdge out : graph.getPropertyGraph().getOutEdges(start)){
-				if (out.getLabel().equals("specifier") && finish.getLabel().contains(out.getDestVertexId())){
-					found = true;						
-				}
-			}
-			if (found == false)
-				role = GraphLabels.AMOD;
+		case "amod": role = GraphLabels.AMOD;
 		break;
 		case "advmod": role = GraphLabels.AMOD;
 		break;
+		//case "advcl:if": role = GraphLabels.RESTRICTION;
+		//break;
 		case "acl:relcl": role = GraphLabels.RESTRICTION;
 		break;
 		case "compound":role = GraphLabels.COMPOUND;
 		break;
+		//case "mwe":role = GraphLabels.COMPOUND;
+		//break;
 		case "dep": role = GraphLabels.MOD;
 		break;
 		// dont know yet if they should be in there, appos is treated in the DepGraphToSemGraph as part of the LinkGraph
 		/*case "appos":role = GraphLabels.RESTRICTION;
-		break;
-		case "case" : if (passive == false){
-			role = GraphLabels.PMOD;
-			}*/
+		break;*/
+		//case "case" : role = GraphLabels.PMOD;
+		//break;
 		}
 		// nmod can have difefrent subtypes, therefore it is put here and not within the switch 
 		if (role.equals("") && edgeLabel.contains("nmod")){
