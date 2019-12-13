@@ -85,6 +85,10 @@ In the subproject sem.mapper there is a class named DepGraphToSemanticGraph.
 In the main method at the end of this class you can choose to run only one sentence or a testsuite with sentences: just comment in or
 out the corresponding method. The testsuite should contain one sentence per line.
 
+# Evaluation
+The testsuite used in our paper *Kalouli, A.-L. and Richard Crouch. 2018. GKR: the Graphical Knowledge Representation for semantic parsing. In Proceedings of SEMBEaR 2018
+@ NAACL 2018* (http://aclweb.org/anthology/W18-1304) can be found in the folder *evaluation*. 
+
 # Contact
 For troubleshooting, comments, ideas and discussions, please contact aikaterini-lida.kalouli(at)uni-konstanz.de or dick.crouch(at)gmail.com
 
