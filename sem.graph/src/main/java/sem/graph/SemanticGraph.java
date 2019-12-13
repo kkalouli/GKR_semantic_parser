@@ -66,6 +66,7 @@ public class SemanticGraph implements Serializable  {
 	protected SemGraph lexGraph;
 	protected SemGraph linkGraph;
 	protected SemGraph dependencyGraph;
+	protected SemGraph distrGraph;
 	protected SemanticNode<?> rootNode;
 	protected String name;
 	
@@ -77,7 +78,7 @@ public class SemanticGraph implements Serializable  {
 		this.name = name;
 	}
 
-	enum SemanticSubGraph {ROLE, CONTEXT, PROPERTY, LEX, LINK, DEPENDENCY}
+	enum SemanticSubGraph {ROLE, CONTEXT, PROPERTY, LEX, LINK, DEPENDENCY, DISTRIBUTION}
 	
 	/**
 	 * Get underlying SemGraph for entire graph
@@ -134,10 +135,47 @@ public class SemanticGraph implements Serializable  {
 	public SemGraph getDependencyGraph() {
 		return dependencyGraph;
 	}
-
-	//public SemanticGraphFactory getFactory() {
-	//	return factory;
-	//}
+	
+	/**
+	 * Get underlying SemGraph for distributional graph
+	 * @return
+	 */
+	public SemGraph getDistrGraph() {
+		return distrGraph;
+	}
+	
+	/**
+	 * Get underlying SemGraph for distributional graph
+	 * @return
+	 */
+	public SemGraph getRolesAndCtxGraph() {
+		Set<SemanticNode<?>> mergedNodes = new HashSet<SemanticNode<?>>();
+		mergedNodes.addAll(this.getRoleGraph().getNodes());
+		mergedNodes.addAll(this.getContextGraph().getNodes());
+		
+		Set<SemanticEdge> mergedEdges = new HashSet<SemanticEdge>();
+		mergedEdges.addAll(this.getRoleGraph().getEdges());
+		mergedEdges.addAll(this.getContextGraph().getEdges());
+		return this.getSubGraph(mergedNodes, mergedEdges);
+	}
+	
+	/**
+	 * Get underlying SemGraph for distributional graph
+	 * @return
+	 */
+	public SemGraph getRolesAndCorefGraph() {
+		if (this.getLinkGraph().getNodes().isEmpty())
+			return new SemJGraphT();
+		Set<SemanticNode<?>> mergedNodes = new HashSet<SemanticNode<?>>();
+		mergedNodes.addAll(this.getRoleGraph().getNodes());
+		mergedNodes.addAll(this.getLinkGraph().getNodes());
+		
+		Set<SemanticEdge> mergedEdges = new HashSet<SemanticEdge>();
+		mergedEdges.addAll(this.getRoleGraph().getEdges());
+		mergedEdges.addAll(this.getLinkGraph().getEdges());
+		return this.getSubGraph(mergedNodes, mergedEdges);
+	}
+	
 
 	public void setRootNode(SemanticNode<?> root) {
 		this.rootNode = root;
@@ -163,6 +201,7 @@ public class SemanticGraph implements Serializable  {
 		this.lexGraph = new SemJGraphT();
 		this.linkGraph = new SemJGraphT();
 		this.dependencyGraph = new SemJGraphT();
+		this.distrGraph = new SemJGraphT();
 		this.rootNode = null;
 		this.name = "";
 	}
@@ -273,6 +312,18 @@ public class SemanticGraph implements Serializable  {
 		addDirectedEdge(edge, start, finish, SemanticSubGraph.DEPENDENCY);
 	}
 	
+	/**
+	 * Add a directed  edge from start node to finish node in the distributional subgraph
+	 * <p> Will add nodes to the graph if they have not already been added.
+	 * @param edge
+	 * @param start
+	 * @param finish
+	 */
+	public void addDistributionalEdge(SemanticEdge edge, SemanticNode<?> start, SemanticNode<?> finish) {
+		addDirectedEdge(edge, start, finish, SemanticSubGraph.DISTRIBUTION);
+	}
+	
+	
 	private void addDirectedEdge(SemanticEdge edge, SemanticNode<?> start, SemanticNode<?> finish, SemanticSubGraph subGraph) {
 		if (edge == null || start == null || finish == null) {
 			return;
@@ -293,12 +344,15 @@ public class SemanticGraph implements Serializable  {
 			break;
 		case CONTEXT:
 			this.contextGraph.addEdge(start, finish, edge);
+			this.distrGraph.addEdge(start, finish, edge);
 			break;
 		case ROLE:
 			this.propertyGraph.addEdge(start, finish, edge);
 			this.lexGraph.addEdge(start, finish, edge);
 			this.roleGraph.addEdge(start, finish, edge);
 			break;
+		case DISTRIBUTION:
+			this.distrGraph.addEdge(start, finish, edge);
 		default:
 			break;
 
@@ -489,16 +543,8 @@ public class SemanticGraph implements Serializable  {
 		 this.graph.display();
 	}
 	
-	public void displayRolesAndCtxs() {
-		Set<SemanticNode<?>> mergedNodes = new HashSet<SemanticNode<?>>();
-		mergedNodes.addAll(this.getRoleGraph().getNodes());
-		mergedNodes.addAll(this.getContextGraph().getNodes());
-		
-		Set<SemanticEdge> mergedEdges = new HashSet<SemanticEdge>();
-		mergedEdges.addAll(this.getRoleGraph().getEdges());
-		mergedEdges.addAll(this.getContextGraph().getEdges());
-		SemGraph subgraph = this.getSubGraph(mergedNodes, mergedEdges);
-		subgraph.display();
+	public void displayRolesAndCtxs() {	
+		this.getRolesAndCtxGraph().display();
 	}
 	
 	public void exportGraphAsJson(){
@@ -829,7 +875,7 @@ public class SemanticGraph implements Serializable  {
 	}
 	
 	/**
-	 * Get only the skolem nodes introduced by naive semantics
+	 * Get only the skolem nodes introduced by naive semantics, e.g. person, thing, etc..
 	 * @return
 	 */
 	public List<SkolemNode> getDerivedSkolems() {
@@ -1006,8 +1052,19 @@ public class SemanticGraph implements Serializable  {
 	public List<SkolemNode> getAllModifiers(SkolemNode node) {
 		List<SkolemNode> retval = new ArrayList<SkolemNode>();
 		if (this.roleGraph.containsNode(node)) {
+			// get also all common arguments depending on any combined termNodes, e.g. the common subject of: The woman is applying eye-liner and using eye-pencil. 
+			if (!this.roleGraph.getInNeighbors(node).isEmpty()){
+				SemanticNode <?> incomingNode = this.roleGraph.getInNeighbors(node).iterator().next();
+				if (incomingNode instanceof TermNode && !(incomingNode instanceof SkolemNode) ) {
+					for (SemanticNode<?> semNode : this.roleGraph.getOutReach(incomingNode)) {
+						if (SkolemNode.class.isAssignableFrom(semNode.getClass()) && !semNode.equals(node) && !isRstr((TermNode) semNode) && this.roleGraph.getEdges(incomingNode, semNode).size() == 1 && !this.roleGraph.getEdges(incomingNode, semNode).iterator().next().getLabel().equals("is_element") ) {
+							retval.add((SkolemNode) semNode);
+						}
+					}
+				}
+			}
 			for (SemanticNode<?> semNode : this.roleGraph.getOutReach(node)) {
-				if (SkolemNode.class.isAssignableFrom(semNode.getClass()) && !semNode.equals(node) && !isRstr((TermNode) semNode)) {
+				if (SkolemNode.class.isAssignableFrom(semNode.getClass()) && !semNode.equals(node) && !isRstr((TermNode) semNode) && !retval.contains(semNode)) {
 					retval.add((SkolemNode) semNode);
 				}
 			}
@@ -1120,12 +1177,9 @@ public class SemanticGraph implements Serializable  {
 	 * @return
 	 */
 	public boolean isLexCoRef(TermNode node) {
-		if (this.lexGraph.containsNode(node) && this.linkGraph.containsNode(node)) {
-			for (SemanticEdge edge : getInEdges(node)) {
-				if (edge.getLabel().equals("lexCoRef")) {
-					return true;
-				}
-			}
+		if (this.linkGraph.containsNode(node)) {
+			if (!this.linkGraph.getInEdges(node).isEmpty())
+				return true;
 		}
 		return false;
 	}
@@ -1145,6 +1199,7 @@ public class SemanticGraph implements Serializable  {
 		}
 		return false;
 	}
+	
 	
 	/**
 	 * Is the a node that only occurs in the lexical graph

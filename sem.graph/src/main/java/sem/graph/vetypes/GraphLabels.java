@@ -25,7 +25,7 @@ public class GraphLabels implements Serializable{
 	/**
 	 * Marks a negative context
 	 */
-	public static final String NOT = "not";
+	//public static final String NOT = "not";
 	
 	public static final String VER = "veridical";
 	
@@ -51,7 +51,7 @@ public class GraphLabels implements Serializable{
 	
 	
 	public static final Set<String> contextEdgeLabels = new HashSet<String>(Arrays.asList(new String[] {
-			CONTEXT_HEAD, OR, NOT, IMPERATIVE, 	INTERROGATIVE, MUST, MAY, MIGHT, SHOULD, OUGHT, NEED, VER, ANTIVER, AVER
+			CONTEXT_HEAD, OR, IMPERATIVE, 	INTERROGATIVE, MUST, MAY, MIGHT, SHOULD, OUGHT, NEED, VER, ANTIVER, AVER
 	}));
 
 	public static final String PRONOUN_RESOLUTION = "prounoun_res";
@@ -87,11 +87,12 @@ public class GraphLabels implements Serializable{
 	public static final String COMP = "sem_comp";
 	public static final String XCOMP = "sem_xcomp";
 	public static final String NMOD = "nmod";
+	public static final String NMOD_COMP = "nmod_comp";
 	public static final String MOD = "mod"; // general mod that we dont know what exactly it is: corresponds to the "dep" UD relation
 	public static final String COMPOUND = "cmp";
 	
 	public static final Set<String> roleEdgeLabels = new HashSet<String>(Arrays.asList(new String[] {
-			AMOD, IS_ELEMENT, RESTRICTION, PMOD, SUBJ, OBJ, COMP, XCOMP, NMOD
+			AMOD, IS_ELEMENT, RESTRICTION, PMOD, SUBJ, OBJ, COMP, XCOMP, NMOD, NMOD_COMP
 	}));
 	
 }

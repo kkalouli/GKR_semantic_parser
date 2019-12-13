@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import sem.graph.NodeContent;
 
 
@@ -16,7 +15,7 @@ import sem.graph.NodeContent;
  * (sense id, taxonomic concepts, RACs).
  *
  */
-public class SenseNodeContent extends NodeContent implements Serializable {
+public class SenseNodeContent extends NodeContent implements Serializable, Comparable {
 
 
 	/**
@@ -24,7 +23,8 @@ public class SenseNodeContent extends NodeContent implements Serializable {
 	 */
 	private static final long serialVersionUID = -5405041614966233844L;
 	private String senseId;
-	private double[] embed;
+	private float[] embed;
+	private String senseKey;
 	private List<String> concepts;
 	private List<String> synonyms;
 	private List<String> hypernyms;
@@ -33,13 +33,14 @@ public class SenseNodeContent extends NodeContent implements Serializable {
 	private boolean hierarchyPrecomputed = false;
 	private Map<String, Integer> subConcepts;
 	private Map<String, Integer> superConcepts;
+	private float senseScore;
 	
 	/**
 	 * Create (empty) SenseNodeContent
 	 */
 	public SenseNodeContent() {
 		senseId = "";
-		embed = new double[300];
+		embed = new float[768];
 		concepts = new ArrayList<String>();
 		synonyms = new ArrayList<String>();
 		hypernyms = new ArrayList<String>();
@@ -48,6 +49,8 @@ public class SenseNodeContent extends NodeContent implements Serializable {
 		// Use null to indicate that they have not been added
 		subConcepts = null;
 		superConcepts = null;
+		senseScore = 0;
+		senseKey = "";
 	}
 	
 	/**
@@ -61,6 +64,8 @@ public class SenseNodeContent extends NodeContent implements Serializable {
 		hypernyms = new ArrayList<String>();
 		hyponyms = new ArrayList<String>();
 		antonyms = new ArrayList<String>();
+		senseScore = 0;
+		senseKey = "";
 
 	}
 
@@ -72,6 +77,15 @@ public class SenseNodeContent extends NodeContent implements Serializable {
 		this.senseId = senseId;
 	}
 
+	public String getSenseKey() {
+		return senseKey;
+	}
+
+	public void setSenseKey(String senseKey) {
+		this.senseKey = senseKey;
+	}
+
+	
 	/**
 	 * Get the list of taxonomic concept ids associated with the sense
 	 * @return
@@ -84,11 +98,11 @@ public class SenseNodeContent extends NodeContent implements Serializable {
 		this.concepts = concepts;
 	}
 	
-	public double[] getEmbed() {
+	public float[] getEmbed() {
 		return embed;
 	}
 
-	public void setEmbed(double[] embed) {
+	public void setEmbed(float[] embed) {
 		this.embed = embed;
 	}
 	
@@ -138,6 +152,18 @@ public class SenseNodeContent extends NodeContent implements Serializable {
 
 	public void setAntonyms(List<String> antonyms) {
 		this.antonyms = antonyms;
+	}
+	
+	/**
+	 * Get the score associated with the sense (from the WSD algorithm)
+	 * @return
+	 */
+	public float getSenseScore() {
+		return senseScore;
+	}
+
+	public void setSenseScore(float senseScore) {
+		this.senseScore = senseScore;
 	}
 	
 	
@@ -264,6 +290,12 @@ public class SenseNodeContent extends NodeContent implements Serializable {
 		sb.append("],[ ");
 		return sb.toString();
 	}
+	
+	@Override
+    public int compareTo(Object o) {
+        SenseNodeContent other = (SenseNodeContent) o;
+        return (int) (this.getSenseScore() - other.getSenseScore());
+    }
 
 
 }

@@ -34,6 +34,7 @@ import java.util.Set;
 
 
 import org.jgrapht.Graph;
+import org.jgrapht.GraphPath;
 import org.jgrapht.ListenableGraph;
 import org.jgrapht.alg.shortestpath.DijkstraShortestPath;
 import org.jgrapht.ext.JGraphXAdapter;
@@ -74,7 +75,7 @@ import sem.graph.vetypes.ValueNode;
  * Implementation of SemGraph via JGraphT
  *
  */
-public class SemJGraphT  extends JApplet implements  SemGraph, Serializable{
+public class SemJGraphT implements  SemGraph, Serializable{
 
 	private static final long serialVersionUID = 4437969385952923418L;
 	private Graph<SemanticNode<?>, SemanticEdge> graph;
@@ -87,11 +88,7 @@ public class SemJGraphT  extends JApplet implements  SemGraph, Serializable{
 			this.graph = graph;
 	}
 	
-	public Graph<SemanticNode<?>, SemanticEdge> getSemJGraphT(){
-		return graph;
-	}
 	
-
 	@Override
 	public void addNode(SemanticNode<?> node) {
 		graph.addVertex(node);	
@@ -303,15 +300,26 @@ public class SemJGraphT  extends JApplet implements  SemGraph, Serializable{
 	@Override
 	public List<SemanticEdge> getShortestPath(SemanticNode<?> start,SemanticNode<?> end) {
 		DijkstraShortestPath<SemanticNode<?>, SemanticEdge> dsp = new DijkstraShortestPath<SemanticNode<?>, SemanticEdge>(this.graph);
-		return dsp.getPath(start,end).getEdgeList(); 
+		GraphPath<SemanticNode<?>, SemanticEdge> path = dsp.getPath(start, end);
+		if (path != null)
+			return dsp.getPath(start,end).getEdgeList(); 
+		else
+			return new ArrayList<SemanticEdge>();
 		
 	}
 
 	@Override
 	public List<SemanticEdge> getShortestUndirectedPath(SemanticNode<?> start, SemanticNode<?> end) {
+		if (!graph.containsVertex(start) || !graph.containsVertex(end)) {
+			return new ArrayList<SemanticEdge>(0);
+		}
 		AsUndirectedGraph<SemanticNode<?>, SemanticEdge> ugraph = new AsUndirectedGraph<SemanticNode<?>, SemanticEdge>(this.graph);
 		DijkstraShortestPath<SemanticNode<?>, SemanticEdge> dsp = new DijkstraShortestPath<SemanticNode<?>, SemanticEdge>(ugraph);
-		return dsp.getPath(start,end).getEdgeList();
+		GraphPath<SemanticNode<?>, SemanticEdge> path = dsp.getPath(start, end);
+		if (path != null)
+			return dsp.getPath(start,end).getEdgeList(); 
+		else
+			return new ArrayList<SemanticEdge>(0);
 	}
 	
 	public String getMxGraph(){	
@@ -342,8 +350,8 @@ public class SemJGraphT  extends JApplet implements  SemGraph, Serializable{
 				} else {
 					v1 = traversedNodes.get(sourceId);
 				}
-				if (!traversedNodes.containsKey(targetId)){
-					v2 = mx.insertVertex(parent, null, targetId, 200, 150, 80, 30, "defaultVertex;fillColor="+targetColor);
+				if (!traversedNodes.containsKey(targetId)){ // 200, 150
+					v2 = mx.insertVertex(parent, null, targetId, 20, 20, 80, 30, "defaultVertex;fillColor="+targetColor);
 					traversedNodes.put(targetId, v2);
 				} else {
 					v2 = traversedNodes.get(targetId);

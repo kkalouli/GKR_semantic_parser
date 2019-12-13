@@ -24,8 +24,6 @@ import java.io.File;
  */
 public interface SemGraph  {
 	
-	public Graph<SemanticNode<?>, SemanticEdge> getSemJGraphT();
-	
 	public void addNode(SemanticNode<?> node);
 	
 	public void addEdge(SemanticNode<?> start, SemanticNode<?> end, SemanticEdge edge);
