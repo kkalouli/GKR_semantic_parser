@@ -13,6 +13,9 @@ If you use this software in writing scientific papers, or you use this
 software in any other medium serving scientists or students (e.g. web-sites,
 CD-ROMs) please include the above citation.
 
+# Demo
+If you would like to have a quick sense of how GKR looks like, check out our online demo: http://lap0973.sprachwiss.uni-konstanz.de:8080/sem.mapper/
+
 # License
 Copyright 2018 Aikaterini-Lida Kalouli and Richard Crouch. GKR is a free-software discributed under the conditions of the Apache License 2.0, without warranty. See LICENSE file for more details. You should have received a copy of the LICENSE file with the source code. If not, please visit http://www.apache.org/licenses/ for more information. 
 
@@ -81,6 +84,10 @@ For Eclipse: import it as a gradle project
 In the subproject sem.mapper there is a class named DepGraphToSemanticGraph.
 In the main method at the end of this class you can choose to run only one sentence or a testsuite with sentences: just comment in or
 out the corresponding method. The testsuite should contain one sentence per line.
+
+# Evaluation
+The testsuite used in our paper *Kalouli, A.-L. and Richard Crouch. 2018. GKR: the Graphical Knowledge Representation for semantic parsing. In Proceedings of SEMBEaR 2018
+@ NAACL 2018* (http://aclweb.org/anthology/W18-1304) can be found in the folder *evaluation*. 
 
 # Contact
 For troubleshooting, comments, ideas and discussions, please contact aikaterini-lida.kalouli(at)uni-konstanz.de or dick.crouch(at)gmail.com
