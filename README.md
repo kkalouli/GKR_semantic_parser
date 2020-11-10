@@ -45,7 +45,7 @@ In particular you must change the following line:
 
 Change the properties file name and set the absolute path in which your *jigsaw.properties* file is installed. 
 
-4. Download and install SUMO as described in https://github.com/ontologyportal/sigmakee. (You don't need to install the apache-tomcat related stuff if we you don't want to run the SUMO interface through your localhost)  
+4. Download and install SUMO as described in https://github.com/ontologyportal/sigmakee. (You don't need to install the apache-tomcat related stuff if we you don't want to run the SUMO interface through your localhost) Download the file *WordNetMappings30-all.txt* provided here and put it in SUMO's folder *WordNetMappings* (this is a combined version of the four separate files *WordNetMappings30-noun/verb/adj/adv* that SUMO itself provides and is used as a consolidated verison when a term cannot be found in the file of its corresponding POS.  
 In order to use SUMO, you must also configure the file *GKR_semantic_parser/sem.mapper/src/main/resources/gkr.properties*. 
 In particular you must change the following line:
 
