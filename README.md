@@ -61,12 +61,19 @@ Change the location and set the location path in which you installed the parent 
 - the *maxent-3.0.0.jar* file (found in the folder *dist/lib/* of your JIGSAW installation)
 - *opennlp-tools-1.5.0.jar* (found in the folder *dist/lib/* of your JIGSAW installation)
 
-7. Download the *glove.6B.zip* from <https://nlp.stanford.edu/projects/glove/> and unzip it. Choose the size of the embedding file you want to work with and copy this file into *GKR_semantic_parser/sem.mapper/src/main/resources/*. The default file chosen is the *glove.6B.300d.txt*. If you choose this file, you don't need to do anything further. If you choose another size file, you have to also configure the file *GKR_semantic_parser/sem.mapper/src/main/resources/gkr.properties*. In particular you must change the line ``` glove=../sem.mapper/src/main/resources/glove.6B.300d.txt``` to the name of the file you chose. 
+7. The GKR parser uses the easy-bert software by Rob Rua (https://zenodo.org/record/2652964#.X6pxb5NKjR0). Although the software is imported through gradle, you will need to download the uncased, BERT model from https://github.com/robrua/easy-bert and unzip it. Once you unzip it, you will see a file *vocab.txt* within the folder. Configure the file *GKR_semantic_parser/sem.mapper/src/main/resources/gkr.properties* and in particular, change the following line:
+
+``` bert_vocab=/Users/kkalouli/Documents/project/sem.mapper/src/main/resources/vocab.txt ```  
+
+to point to the location of the *vocab.txt* file.
+
+************** Deprecated ******************
+Download the *glove.6B.zip* from <https://nlp.stanford.edu/projects/glove/> and unzip it. Choose the size of the embedding file you want to work with and copy this file into *GKR_semantic_parser/sem.mapper/src/main/resources/*. The default file chosen is the *glove.6B.300d.txt*. If you choose this file, you don't need to do anything further. If you choose another size file, you have to also configure the file *GKR_semantic_parser/sem.mapper/src/main/resources/gkr.properties*. In particular you must change the line ``` glove=../sem.mapper/src/main/resources/glove.6B.300d.txt``` to the name of the file you chose. 
+********************************************
 
 
 
-
-Go back into the cloned directory and find the *build.gradle* file of the *sem.mapper* folder. Change the following line
+8. Go back into the cloned directory and find the *build.gradle* file of the *sem.mapper* folder. Change the following line
 ```compile fileTree(dir: '/Users/kkalouli/Documents/libraries/GKR_libs/', include: ['*.jar']) ```
 to point at the location in which you created the *GKR_libs* folder. 
 
