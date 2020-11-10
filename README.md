@@ -35,8 +35,8 @@ Change the location and set the directory in which the WordNet dictionary is ins
 
 3. Download and install JIGSAW as described in <https://github.com/pippokill/JIGSAW> 
 Although you will have downloaded WordNet by now, make sure you follow the JIGSAW instructions for modifying the JIGSAW config file in
-*JIGSAW/resources/wn_file_properties.xml* . Also, in the jigsaw.properties file replace the relative paths of *wn_file_properties.xml*, *nlp.tokenModel*, *nlp.posTagModel* and 
-*nlp.stopWordFile* with the absolute paths of their location in your system.
+*JIGSAW/resources/wn_file_properties.xml* . Also, in the *jigsaw.properties* file replace the relative paths of *wn_file_properties.xml*, *nlp.tokenModel*, *nlp.posTagModel* and 
+*nlp.stopWordFile* with the absolute paths of their location in your system. In the same file, make sure that the property *wsd.shortOutput* is set to false (*wsd.shortOutput=false*).
 
 In order to use JIGSAW, you must also configure the file *GKR_semantic_parser/sem.mapper/src/main/resources/gkr.properties*. 
 In particular you must change the following line:
