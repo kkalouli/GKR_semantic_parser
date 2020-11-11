@@ -1,11 +1,14 @@
 # About
 
 This is the Graphical Knowledge Representation (GKR) parser. It transforms a given sentence into a layered semantic graph as described
-in *Kalouli, A.-L. and Richard Crouch. 2018. GKR: the Graphical Knowledge Representation for semantic parsing. In Proceedings of SEMBEaR 2018
-@ NAACL 2018* : http://aclweb.org/anthology/W18-1304 
+in *Kalouli, A.-L. and R. Crouch. 2018. GKR: the Graphical Knowledge Representation for semantic parsing. In Proceedings of SEMBEaR 2018
+@NAACL 2018* : http://aclweb.org/anthology/W18-1304 
 
 Companion paper: *Crouch, R. and A.-L. Kalouli. 2018. Named Graphs for Semantic Representations. In Proceedings of \*SEM 2018
-@ NAACL 2018* : http://aclweb.org/anthology/S18-2013 
+@NAACL 2018* : http://aclweb.org/anthology/S18-2013 
+
+Application paper: *Kalouli, A.-L., R. Crouch and V. de Paiva. GKR: Bridging the gap between symbolic/structural and distributional meaning representations. In
+Proceedings of the 1st International Workshop on Designing Meaning Representations @ ACL 2019* : https://www.aclweb.org/anthology/W19-3305/
 
 Author/developer: Aikaterini-Lida Kalouli (<aikaterini-lida.kalouli@uni-konstanz.de>) and Richard Crouch (<dick.crouch@gmail.com>)
 
