@@ -20,8 +20,8 @@ import sem.graph.vetypes.TermNodeContent;
 
 
 /**
- * This class maps the roles of the graph.
- * @author kkalouli
+ * Convert dependency graph to concept graph.
+ * @author Katerina Kalouli, 2017
  *
  */
 public class RolesMapper implements Serializable {
@@ -59,6 +59,7 @@ public class RolesMapper implements Serializable {
 	private ArrayList<SemanticEdge> edgesToRemove;
 	// boolean whether there was a subj found, otherwise it's imperative and the subj has to be added
 	private boolean foundSubj;
+	private ArrayList<String> specifiers;
 	
 
 
@@ -81,6 +82,19 @@ public class RolesMapper implements Serializable {
 		this.edgesToAdd = new HashMap<String, SemanticEdge>();
 		this.traversedEdges = new ArrayList<SemanticEdge>();
 		this.edgesToRemove = new ArrayList<SemanticEdge>();
+		this.specifiers = new ArrayList<String>();
+		specifiers.add("a");
+		specifiers.add("an");
+		specifiers.add("the");
+		specifiers.add("many");
+		specifiers.add("few");
+		specifiers.add("much");
+		specifiers.add("little");
+		specifiers.add("most");
+		specifiers.add("some");
+		specifiers.add("several");
+		specifiers.add("all");
+		specifiers.add("every");
 		
 	}
 
@@ -266,7 +280,10 @@ public class RolesMapper implements Serializable {
 			else if (edgesToRemove.contains(edge))
 				continue;
 			SemanticNode<?> start = depGraph.getStartNode(edge);
-			SemanticNode<?> finish = depGraph.getEndNode(edge);		
+			SemanticNode<?> finish = depGraph.getEndNode(edge);	
+			// some quantifiers are labeled as amod by stanford so make sure you dont add them to concept graph
+			if (specifiers.contains(finish.getLabel().substring(0,finish.getLabel().indexOf("_"))))
+				continue;
 			// integrate the basic roles for these edges
 			integrateBasicRoles(start,finish,edge.getLabel());
 			traversed.add(edge);
@@ -312,6 +329,8 @@ public class RolesMapper implements Serializable {
 			ArrayList<SemanticNode<?>> combNode = new ArrayList<SemanticNode<?>>();
 			combNode.add(begin); 
 			combNode.add(end);
+			if (specifiers.contains(finish.getLabel().substring(0,finish.getLabel().indexOf("_"))))
+				continue;
 			// only integrate the basic roles if the list does not contain the current list and the begin node is not the same as the end node
 			if (!begin.equals(end) && !addedComb.contains(combNode)){
 				integrateBasicRoles(begin,end,edge.getLabel());
@@ -483,6 +502,7 @@ public class RolesMapper implements Serializable {
 	 */
 	private void checkForMoreThanDoubleCoordination(){
 		//graph.displayRoles();
+		//graph.displayContexts();
 		ArrayList<SemanticNode<?>> coordNodes = new ArrayList<SemanticNode<?>>();
 		ArrayList<SemanticNode<?>> termNodes = new ArrayList<SemanticNode<?>>();
 		// get through the role graph and see if there are any nodes that are coordinated 
@@ -520,7 +540,7 @@ public class RolesMapper implements Serializable {
 			label += "_"+ele+"_";
 			label += partsOfName[1].substring(partsOfName[1].indexOf("_")+1);
 			// get all children of the combined node to add them to the bigger combined node
-			for (SemanticEdge edge : graph.getRoleGraph().getOutEdges(node)){
+			for (SemanticEdge edge : graph.getRoleGraph().getEdges(node)){
 				if (!outEdges.contains(edge)){
 					outEdges.add(edge);
 				}
@@ -535,14 +555,18 @@ public class RolesMapper implements Serializable {
 			// only add the children of the combined nodes once 
 			boolean found = false;
 			for (SemanticEdge edge: graph.getRoleGraph().getEdges()){
-				if (edge.getLabel().equals(roleEdge.getLabel()) && edge.getDestVertexId().equals(finish.getLabel()) && edge.getSourceVertexId().equals(combNode.getLabel()) ){
+				if ( (edge.getLabel().equals(roleEdge.getLabel()) && edge.getDestVertexId().equals(finish.getLabel()) && edge.getSourceVertexId().equals(combNode.getLabel())) 
+						|| (edge.getLabel().equals(roleEdge.getLabel()) && edge.getDestVertexId().equals(combNode.getLabel()) && edge.getSourceVertexId().equals(start.getLabel())) ){
 					found = true;
 				}				
 			}
-			if (found == false)
-				graph.addRoleEdge(roleEdge, combNode, finish);
-			if (!combNodesToRemoveAfterAddingChildren.contains(start))
+			if (found == false && start instanceof SkolemNode && finish instanceof TermNode)
+				graph.addRoleEdge(roleEdge, start, combNode);
+			if (found == false && start instanceof TermNode && finish instanceof SkolemNode)
+				graph.addRoleEdge(roleEdge, combNode, finish); 
+			if (!combNodesToRemoveAfterAddingChildren.contains(start) && !(start instanceof SkolemNode))
 				combNodesToRemoveAfterAddingChildren.add(start);	
+			//graph.displayRoles();
 		}
 		// remove all double-combined nodes since they have been replaced by the third-combined 
 		for (SemanticNode<?> node : combNodesToRemoveAfterAddingChildren){
@@ -622,7 +646,7 @@ public class RolesMapper implements Serializable {
 		// dont know yet if they should be in there, appos is treated in the DepGraphToSemGraph as part of the LinkGraph
 		/*case "appos":role = GraphLabels.RESTRICTION;
 		break;*/
-		//case "case" : role = GraphLabels.PMOD;
+		//case "obl:to" : role = GraphLabels.PMOD;
 		//break;
 		}
 		// nmod can have difefrent subtypes, therefore it is put here and not within the switch 

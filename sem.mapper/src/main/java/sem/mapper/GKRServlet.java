@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
@@ -23,10 +24,16 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.Part;
 
 import sem.graph.SemGraph;
 
 
+/** 
+ * HttpServlet for the GKR demo. 
+ * @author Katerina Kalouli, 2019
+ *
+ */
 // uncomment to use through Gretty plugin
 //@WebServlet(name = "GKRServlet", urlPatterns = {"gkr"}, loadOnStartup = 1) 
 public class GKRServlet extends HttpServlet {
@@ -37,6 +44,7 @@ public class GKRServlet extends HttpServlet {
 	private static final long serialVersionUID = -2259876163739962321L;
 	private DepGraphToSemanticGraph semConverter;
 	private sem.graph.SemanticGraph graph;
+	private String outputFile;
 	private HashMap<String,String> examples;
 	
 	public GKRServlet(){
@@ -95,8 +103,31 @@ public class GKRServlet extends HttpServlet {
         		return;
         	}
         }
-        String sentence = request.getParameter("sentence");
-        if (sentence.equals("")) {
+        // submitting a whole file
+        if ( request.getPart("file") != null){
+            Part filePart = request.getPart("file");
+            InputStream fileInputStream = filePart.getInputStream();
+            //System.out.println("fileinput");
+        	
+            if (filePart.getSubmittedFileName().equals("")) {
+            	System.out.println("found nothing");
+            	 request.getRequestDispatcher("index.jsp").forward(request, response); 
+            	 return;
+            }
+            if(!filePart.getSubmittedFileName().matches("(\\w*(_)*)*.csv")){
+    			request.setAttribute("error", "Please enter a valid file name (the file name may contain only letters and underscores, and end at csv");
+    			request.getRequestDispatcher("response.jsp").forward(request,response);
+    			return;
+    		}
+            this.outputFile = semConverter.processDemoTestsuite(fileInputStream);
+            //System.out.println(outputFile.toString());
+    	    request.setAttribute("outputFile", outputFile);
+    		request.getRequestDispatcher("response_demo.jsp").forward(request, response); 
+    		return;
+
+        }
+        // submitting one sentence
+        if (request.getParameter("sentence") == null || request.getParameter("sentence").equals("")) {
         	System.out.println("found nothing");
         	 request.getRequestDispatcher("index.jsp").forward(request, response); 
         	 return;
@@ -106,6 +137,7 @@ public class GKRServlet extends HttpServlet {
 			request.getRequestDispatcher("response.jsp").forward(request,response);
 			return;
 		}
+        String sentence = request.getParameter("sentence");
         if (!sentence.endsWith(".") && !sentence.endsWith("?") && !sentence.endsWith("!")){
         	sentence = sentence+".";
         }
@@ -230,28 +262,5 @@ public class GKRServlet extends HttpServlet {
 	    	return graphProcessed.getMxGraph();
 	    }
 	}
-    
-    /*protected void createImages(Integer counter){
-    	ServletContext context = getServletContext();
-    	String fullPath = context.getRealPath("src/main/webapp/images/");
-    	String typo = "/Library/Tomcat/webapps/sem.mapper/";
-    	String kate_apache = "/Users/kkalouli/Documents/Programs/apache-tomcat-9.0.19/webapps/sem.mapper/";
-    	String kate_appRun = "src/main/webapp/";
-    	String gpu_appRun = "/home/kkalouli/Documents/project/semantic_processing/sem.mapper/src/main/webapp/";
-    	String gpu_apache = "/home/kkalouli/Documents/Programs/apache-tomcat-9.0.20/webapps/sem.mapper/";
-    	try {
-			ImageIO.write(graph.saveRolesAsImage(),"png", new File(kate_appRun+"images/roles_"+counter+".png")); 
-			ImageIO.write(graph.saveDepsAsImage(),"png", new File(kate_appRun+"images/deps_"+counter+".png"));
-		    ImageIO.write(graph.saveContextsAsImage(),"png", new File(kate_appRun+"images/ctxs_"+counter+".png"));
-		    ImageIO.write(graph.savePropertiesAsImage(),"png", new File(kate_appRun+"images/props_"+counter+".png"));
-		    ImageIO.write(graph.saveLexAsImage(),"png", new File(kate_appRun+"images/lex_"+counter+".png"));
-		    ImageIO.write(graph.saveCorefAsImage(),"png", new File(kate_appRun+"images/coref_"+counter+".png"));
-		    
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-    }*/
-    
     
 }

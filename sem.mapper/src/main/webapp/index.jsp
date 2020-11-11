@@ -45,7 +45,7 @@ z-index: 10000;
 		in end-to-end deep learning approaches. The
 		representation is especially targeted towards Natural Language
 		Inference (NLI) but is also suitable for other semantic processing tasks, e.g. semantic similarity tasks. <br>
-		The current version of GKR makes uses of the Stanford CoreNLP 3.8.0 software to build the dependency graph. It also uses the Princeton WordNet 3.0
+		The current version of GKR makes uses of the Stanford CoreNLP 3.9.2 software to build the dependency graph. It also uses the Princeton WordNet 3.0
 		version to extract the senses of the lexical graph. For more details on how this software is used, please refer to our publications. 
 		This demo seeks to give interested researchers a taste of GKR. Currently, GKR can deal with various contextual phenomena, such as negation, 
 		modals, clausal contexts of propositional attitudes (e.g. belief, knowledge, obligation),  implicatives, interrogative and imperative clauses, 
@@ -68,10 +68,26 @@ z-index: 10000;
 	<h2 class="tab" id="online"><font color="#349aff">Online Demo for GKR</font></h2>
 	<p class="tab">
 		Enter a sentence below to try our GKR parser online:<br>
-		<form class="tab" method="post" action="gkr">  
+		<form class="tab" method="post" action="gkr" enctype="multipart/form-data">  
   <input type="text" id="sentence-input" name="sentence" />
    <!-- <input type="submit" id="process-button" value="Process" /> -->
      <button class="btn btn-primary mb1 bg-blue" type="submit">Submit</button>
+</form>
+<p class="tab">
+<br>
+<br>
+		<b>File Upload: Experimental - NOT optimized! </b> <br>
+		Upload a small file up to 5 KB. <br>
+		The file should contain one sentence per line of the format: \id_number\ \tab\ \sentence\, e.g. 1\tA dog is walking.	 
+		The filename should end at .csv. Lines starting with # are considered comments and ignored.
+		Depending on the size of your file, this might take a while.
+		The output will be a string representation of GKR which is not optimized for readability!
+		The string representation does not contain the information of the lexical and coreference graph.  <br>
+		<form class="tab" method="post" action="gkr" enctype="multipart/form-data">  
+  		<p>Select a file:</p>
+  		<input type="file" name="file"><br>
+   <!-- <input type="submit" id="process-button" value="Process" /> -->
+     <button class="btn btn-primary mb1 bg-blue" type="submit">Submit</button>     
 </form>
 
 <br>

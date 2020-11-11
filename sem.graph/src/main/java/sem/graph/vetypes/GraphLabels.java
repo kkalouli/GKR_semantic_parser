@@ -64,7 +64,7 @@ public class GraphLabels implements Serializable{
 	}));
 	
 	
-	public static final String CARDINAL = "cardinal";
+	public static final String CARDINAL = "cardinality";
 	public static final String SPECIFIER = "specifier";
 	public static final String TENSE = "tense";
 	public static final String ASPECT = "aspect";
@@ -92,7 +92,7 @@ public class GraphLabels implements Serializable{
 	public static final String COMPOUND = "cmp";
 	
 	public static final Set<String> roleEdgeLabels = new HashSet<String>(Arrays.asList(new String[] {
-			AMOD, IS_ELEMENT, RESTRICTION, PMOD, SUBJ, OBJ, COMP, XCOMP, NMOD, NMOD_COMP
+			AMOD, IS_ELEMENT, RESTRICTION, PMOD, SUBJ, OBJ, COMP, XCOMP, NMOD, NMOD_COMP, COMPOUND,MOD,IOBJ
 	}));
 	
 }

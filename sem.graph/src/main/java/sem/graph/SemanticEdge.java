@@ -28,9 +28,6 @@ public class SemanticEdge implements Comparable<SemanticEdge>,Serializable {
 		this.label = null;
 		this.content = null;
 	}
-	//public SemanticEdge(String label, EdgeContent content) {
-	//	this(-1, label, content);
-	//}
 	
 	/**
 	 * Get the (unique) identifier of the edge
@@ -39,10 +36,6 @@ public class SemanticEdge implements Comparable<SemanticEdge>,Serializable {
 	public String getId() {
 		return sourceVertexId + "-" +  label + "-" + destVertexId;
 	}
-	
-	//protected void setId(int id) {
-	//	this.id = id;
-	//}
 	
 	/**
 	 * Get the label of the edge (need not be unique)
@@ -70,7 +63,7 @@ public class SemanticEdge implements Comparable<SemanticEdge>,Serializable {
 
 	/** 
 	 * Get the identifier of the source vertex.
-	 * See {@link SemanticGraph#getStartNode(SemanticEdge)} for getting the actual edge
+	 * See {@link SemanticGraph#getStartNode(SemanticEdge)} for getting the actual edge.
 	 * @return
 	 */
 	public String getSourceVertexId() {
@@ -79,7 +72,7 @@ public class SemanticEdge implements Comparable<SemanticEdge>,Serializable {
 
 	/**
 	 * Get the identifier of the destination vertex.
-	 * See {@link SemanticGraph#getFinishNode(SemanticEdge)} for getting the actual edge
+	 * See {@link SemanticGraph#getFinishNode(SemanticEdge)} for getting the actual edge.
 	 * @return
 	 */
 	public String getDestVertexId() {
@@ -87,7 +80,7 @@ public class SemanticEdge implements Comparable<SemanticEdge>,Serializable {
 	}
 	
 	/**
-	 * Use label for mnemonic printing of edges (in graph display)
+	 * Use label for mnemonic printing of edges (in graph display).
 	 */
 	@Override
 	public String toString() {

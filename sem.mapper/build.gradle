@@ -6,7 +6,7 @@ plugins {
 dependencies {
 	
 	// compile all jars that are not found in repositories 
-	compile fileTree(dir: '/Users/kkalouli/Documents/libraries/GKR_libs/', include: ['*.jar'])	
+	compile fileTree(dir: '/home/kkalouli/Documents/diss/GKR_libs/', include: ['*.jar'])	
     
     // https://mvnrepository.com/artifact/edu.stanford.nlp/stanford-corenlp
 	//compile group: 'edu.stanford.nlp', name: 'stanford-corenlp', version: '3.8.0' 
@@ -75,4 +75,5 @@ dependencies {
 	
 
 }
+
 

@@ -54,6 +54,11 @@ import sem.graph.vetypes.SkolemNodeContent;
 import sem.graph.vetypes.ValueNode;
 import sem.graph.vetypes.ValueNodeContent;
 
+/**
+ * Convert the Stanford graph to the whole GKR graph. 
+ * @author Katerina Kalouli, 2017
+ *
+ */
 public class DepGraphToSemanticGraph implements Serializable {
 
 	/**
@@ -74,7 +79,7 @@ public class DepGraphToSemanticGraph implements Serializable {
 
 
 	/**
-	 * Constructor to be used when DepGraphToSemanticGraph is called from the InferenceComputer.
+	 * Constructor to be used when DepGraphToSemanticGraph is called from the {@link InferenceComputer}.
 	 * In this case, bert, bertTokenizer, the PWN Dict and the SUMo content are passed as parameters
 	 * so that they are not called every time a new sentence is parsed
 	 * @param bert
@@ -458,8 +463,13 @@ public class DepGraphToSemanticGraph implements Serializable {
 				// going through the out edges of this node to see if there are any specifiers
 				for (SemanticEdge edge: graph.getDependencyGraph().getOutEdges(node)){
 					// depending on the case, define the specifier
-					String depOfDependent = edge.getLabel();			
-					String determiner = ((SkolemNodeContent) graph.getFinishNode(edge).getContent()).getStem(); //edge.getDestVertexId().substring(0,edge.getDestVertexId().indexOf("_"));
+					String depOfDependent = edge.getLabel();
+					String determiner = "";
+					// need to check whether the finish node is not empty: in the case of negation or modals, the finish node will
+					// be empty because it is not added as a normal concept node. But in these cases, the node also does not need to
+					// be a determiner
+					if (graph.getFinishNode(edge) != null)
+						determiner = ((SkolemNodeContent) graph.getFinishNode(edge).getContent()).getStem(); //edge.getDestVertexId().substring(0,edge.getDestVertexId().indexOf("_"));
 					if (depOfDependent.equals("det") && existsQMod == false) {					
 						specifier = determiner; 
 						// only if there is no quantification with of, assign this determiner as the cardinatlity
@@ -519,6 +529,10 @@ public class DepGraphToSemanticGraph implements Serializable {
 					PropertyEdge specifierEdge = new PropertyEdge(GraphLabels.SPECIFIER, new PropertyEdgeContent());
 					graph.addPropertyEdge(specifierEdge, node, new ValueNode(specifier, new ValueNodeContent()));
 				}
+				else if (specifier.equals("")){
+					PropertyEdge specifierEdge = new PropertyEdge(GraphLabels.SPECIFIER, new PropertyEdgeContent());
+					graph.addPropertyEdge(specifierEdge, node, new ValueNode("bare", new ValueNodeContent()));
+				}
 				// adding the property edge part_of (e.g. five of seven, five is the specifier and seven the part_of)
 				if (!part_of.equals("")){
 					PropertyEdge partOfEdge = new PropertyEdge(GraphLabels.PART_OF, new PropertyEdgeContent());
@@ -575,7 +589,7 @@ public class DepGraphToSemanticGraph implements Serializable {
 		try {		
 			senses = retriever.disambiguateSensesWithJIGSAW(wholeCtx); // stanGraph.toRecoveredSentenceString());
 			// next line needed for non-multithreading
-			retriever.getEmbedForWholeCtx(wholeCtx);
+			//retriever.getEmbedForWholeCtx(wholeCtx);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -699,22 +713,35 @@ public class DepGraphToSemanticGraph implements Serializable {
 		}
 		// make sure you get indirect semantics for things added later to the context graph
 		for (SemanticNode<?> ctxNode : graph.getContextGraph().getNodes()){
-			if (ctxNode.getLabel().contains("person") || ctxNode.getLabel().contains("thing")){
+			if (ctxNode.getLabel().contains("person_") || ctxNode.getLabel().contains("thing_")){
 				String sense = "";
 				String concept = "";
 				if (ctxNode.getLabel().contains("person")){
 					sense = "00007846";
 					concept = "Human=";
+					try {
+						retriever.getLexRelationsOfSynset("person", "00007846", "NN");
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 				}
-				else {
+				else if (ctxNode.getLabel().contains("thing")){
 					sense = "04424218";
 					concept = "Artifact=";
-				}
-				try {
-					retriever.getLexRelationsOfSynset(((SkolemNode) ctxNode).getStem(), sense, ((SkolemNode) ctxNode).getPartOfSpeech());
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+					try {
+						retriever.getLexRelationsOfSynset("thing", "04424218", "NN");
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				} else {
+					try {
+						retriever.getLexRelationsOfSynset(((SkolemNode) ctxNode).getStem(), sense, ((SkolemNode) ctxNode).getPartOfSpeech());
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 				}
 				// create new sense Content
 				SenseNodeContent senseContent = new SenseNodeContent(sense);
@@ -805,7 +832,7 @@ public class DepGraphToSemanticGraph implements Serializable {
 					if (n instanceof SkolemNode){
 						if (((SkolemNodeContent) n.getContent()).getPosition() == k.getTarget()){
 							// in the first pass of this chain, set the startNode, in all other ones set the finishNode (the start Node remains the same)
-							if (startNode == null && !((SkolemNodeContent) n.getContent()).getPartOfSpeech().contains("PRP")){
+							if (startNode == null){ //) && !((SkolemNodeContent) n.getContent()).getPartOfSpeech().contains("PRP")){
 								startNode = n;
 							} else {
 								finishNode = n;
@@ -868,23 +895,26 @@ public class DepGraphToSemanticGraph implements Serializable {
 		InputStreamReader inputReader = new InputStreamReader(fileInput, "UTF-8");
 		BufferedReader br = new BufferedReader(inputReader);
 		// true stands for append = true (dont overwrite)
-		//BufferedWriter writer = new BufferedWriter( new FileWriter(file.substring(0,file.indexOf(".txt"))+"_processed.csv", true));
+		BufferedWriter writer = new BufferedWriter( new FileWriter(file.substring(0,file.indexOf(".txt"))+"_processed.csv", true));
 		FileOutputStream fileSer = null;
 		ObjectOutputStream writerSer = null;
 		String strLine;
 		ArrayList<sem.graph.SemanticGraph> semanticGraphs = new ArrayList<sem.graph.SemanticGraph>();
 		while ((strLine = br.readLine()) != null) {
-			if (strLine.startsWith("####")){
-				//writer.write(strLine+"\n\n");
-				//writer.flush();
+			if (strLine.startsWith("#")){
+				writer.write(strLine+"\n\n");
+				writer.flush();
 				continue;
 			}
 			String text = strLine.split("\t")[1];
+	        if (!text.endsWith(".") && !text.endsWith("?") && !text.endsWith("!")){
+	        	text = text+".";
+	        }
 			SemanticGraph stanGraph = parser.parseOnly(text);
 			sem.graph.SemanticGraph graph = this.getGraph(stanGraph, text, text);
 			//System.out.println(graph.displayAsString());
-			//writer.write(strLine+"\n"+graph.displayAsString()+"\n\n");
-			//writer.flush();
+			writer.write(strLine+"\n"+graph.displayAsString()+"\n\n");
+			writer.flush();
 			System.out.println("Processed sentence "+ strLine.split("\t")[0]);
 			if (graph != null)
 				semanticGraphs.add(graph);
@@ -901,7 +931,7 @@ public class DepGraphToSemanticGraph implements Serializable {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} 
-		//writer.close();
+		writer.close();
 		br.close();
 		fileSer.close();
 		writerSer.close();
@@ -909,6 +939,72 @@ public class DepGraphToSemanticGraph implements Serializable {
 		inputReader.close();
 		//plainSkolemsWriter.close();
 	}
+	
+	/***
+	 * Process a testsuite for the DEMO.
+	 * Process a testsuite of sentences with GKR. One sentence per line.
+	 * Lines starting with # are considered comments.
+	 * The output is formatted as string: in this format only the dependency graph, the
+	 * concepts graph, the contextual graph and the properties graph are displayed
+	 * @param file
+	 * @param semConverter
+	 * @throws IOException
+	 */
+
+	public String processDemoTestsuite(InputStream file) throws IOException{
+		InputStreamReader inputReader = new InputStreamReader(file, "UTF-8");
+		BufferedReader br = new BufferedReader(inputReader);
+		// true stands for append = true (dont overwrite)
+		String outputName = "/home/kkalouli/Documents/Programs/apache-tomcat-9.0.20/webapps/sem.mapper/processed.txt";
+		BufferedWriter writer = new BufferedWriter( new FileWriter(outputName, true));
+		FileOutputStream fileSer = null;
+		ObjectOutputStream writerSer = null;
+		String strLine;
+		ArrayList<sem.graph.SemanticGraph> semanticGraphs = new ArrayList<sem.graph.SemanticGraph>();
+		while ((strLine = br.readLine()) != null) {
+			if (strLine.startsWith("####")){
+				writer.write(strLine+"\n\n");
+				writer.flush();
+				continue;
+			}
+			String text = strLine.split("\t")[1];
+	        if (!text.endsWith(".") && !text.endsWith("?") && !text.endsWith("!")){
+	        	text = text+".";
+	        }
+	        if (!text.matches("(\\w*(\\s|,|\\.|\\?|!|\"|-|')*)*")) {
+	        	writer.write(strLine+"\nSentence cannot be processed. Invalid characters.\n\n");
+	        	continue;
+	        }
+			SemanticGraph stanGraph = parser.parseOnly(text);
+			sem.graph.SemanticGraph graph = this.getGraph(stanGraph, text, text);
+			//System.out.println(graph.displayAsString());
+			writer.write(strLine+"\n"+graph.displayAsString()+"\n\n");
+			///System.out.println("Processed sentence "+ strLine.split("\t")[0]);
+			//if (graph != null)
+			//	semanticGraphs.add(graph);
+		}
+		// serialize and write to file
+		/*try {
+			fileSer = new FileOutputStream("serialized_SemanticGraphs.ser");
+			writerSer = new ObjectOutputStream(fileSer);
+			writerSer.writeObject(semanticGraphs); 				
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} */
+		writer.close();
+		br.close();
+		//fileSer.close();
+		//writerSer.close();
+		//fileInput.close();
+		inputReader.close();
+		return outputName;
+		//plainSkolemsWriter.close();*/
+	}
+
 
 	/***
 	 * Process a single sentence with GKR. 
@@ -928,6 +1024,8 @@ public class DepGraphToSemanticGraph implements Serializable {
 		graph.displayLex();	
 		graph.displayRolesAndCtxs();
 		graph.displayCoref();
+		graph.displayRolesAndLinks();
+		graph.displayRolesCtxsAndProperties();
 		/*String ctxs = graph.getContextGraph().getMxGraph();
 		String roles = graph.getRoleGraph().getMxGraph();
 		String deps = graph.getDependencyGraph().getMxGraph();
@@ -980,7 +1078,7 @@ public class DepGraphToSemanticGraph implements Serializable {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (ClassNotFoundException e) {
-			// TODO Auto-generated catch block
+		// TODO Auto-generated catch block
 			e.printStackTrace();
 		} 
 		return semanticGraphs;
@@ -991,8 +1089,9 @@ public class DepGraphToSemanticGraph implements Serializable {
 	public static void main(String args[]) throws IOException {
 		DepGraphToSemanticGraph semConverter = new DepGraphToSemanticGraph();
 		//semConverter.deserializeFileWithComputedPairs("/Users/kkalouli/Documents/Stanford/comp_sem/forDiss/test.txt");
-		//emConverter.processTestsuite("/Users/kkalouli/Documents/Stanford/comp_sem/forDiss/expriment_InferSent/SICK_unique_sent_test_InferSent_onlySkolems.txt");
-		String sentence = "Two children are lying in the snow and are making snow angels.";//"A family is watching a little boy who is hitting a baseball.";
+		//semConverter.processTestsuite("/Users/kkalouli/Documents/Stanford/comp_sem/forDiss/HP_testsuite/HP_testsuite_shortened_active.txt");
+		//semConverter.processTestsuite("/home/kkalouli/Documents/diss/experiments/UD_corpus_cleaned.txt");
+		String sentence = "Mary must not go to the cinema."; //A family is watching a little boy who is hitting a baseball.";
 		String context = "The kid faked the illness.";
 		semConverter.processSentence(sentence, sentence+" "+context);
 	}

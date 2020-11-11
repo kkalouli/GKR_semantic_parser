@@ -6,7 +6,7 @@ import sem.graph.SemanticNode;
 
 
 /**
- * A {@link SemanticNode} representing the value of a morpho-semantic feature
+ * A {@link SemanticNode} representing the value of a distributional feature. Not used for now.
   *
  */
 public class DistributionalNode extends SemanticNode<DistributionalNodeContent> implements Serializable {

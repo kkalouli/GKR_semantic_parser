@@ -20,6 +20,11 @@ import sem.graph.vetypes.SkolemNode;
 import sem.graph.vetypes.SkolemNodeContent;
 import sem.graph.vetypes.TermNode;
 
+/**
+ * Not used for now.
+ * @author Katerina Kalouli, 2018
+ *
+ */
 public class DistributionMapper {
 	private SemGraph roleGraph;
 	private SemGraph ctxGraph;

@@ -57,7 +57,11 @@ import sem.graph.SemanticGraph;
 import sem.graph.vetypes.SkolemNode;
 
 
-
+/**
+ * Map nodes to their senses for the lexical graph. 
+ * @author Katerina Kalouli, 2017
+ *
+ */
 public class SenseMappingsRetriever implements Serializable {
 	
 	/**
@@ -126,6 +130,7 @@ public class SenseMappingsRetriever implements Serializable {
 		hashOfPOS.put("VBN","VERB");
 		hashOfPOS.put("VBP","VERB");
 		hashOfPOS.put("VBZ","VERB");
+		hashOfPOS.put("CD","NOUN");
 		this.props = new Properties();
 		InputStreamReader streamReader = new InputStreamReader(configFile);
 		try {
@@ -189,6 +194,7 @@ public class SenseMappingsRetriever implements Serializable {
 		hashOfPOS.put("VBN","VERB");
 		hashOfPOS.put("VBP","VERB");
 		hashOfPOS.put("VBZ","VERB");
+		hashOfPOS.put("CD","NOUN");
 		this.props = new Properties();
 		InputStreamReader streamReader = new InputStreamReader(configFile);
 		try {

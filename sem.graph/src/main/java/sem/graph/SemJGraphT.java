@@ -63,6 +63,7 @@ import com.mxgraph.view.mxGraph;
 import sem.graph.vetypes.ContextEdge;
 import sem.graph.vetypes.ContextNode;
 import sem.graph.vetypes.LexEdge;
+import sem.graph.vetypes.LinkEdge;
 import sem.graph.vetypes.RoleEdge;
 import sem.graph.vetypes.SenseNode;
 import sem.graph.vetypes.SkolemNode;
@@ -250,6 +251,24 @@ public class SemJGraphT implements  SemGraph, Serializable{
 		}
 		return retval;
 	}
+	
+	@Override
+	public Set<SemanticEdge> getOutReachEdges(SemanticNode<?> node) {
+		return new HashSet<SemanticEdge>(breadthFirstTraversalEdges(this.graph, node));
+	}
+		
+	public List<SemanticEdge> breadthFirstTraversalEdges(Graph<SemanticNode<?>, SemanticEdge> graph, SemanticNode<?> node) {
+		List<SemanticEdge> retval = new ArrayList<SemanticEdge>();
+		if (graph.containsVertex(node)) {
+			BreadthFirstIterator<SemanticNode<?>, SemanticEdge> bfi 
+				= new BreadthFirstIterator<SemanticNode<?>, SemanticEdge>(graph, node);
+			while (bfi.hasNext()) {
+				SemanticEdge rnode = bfi.getSpanningTreeEdge(bfi.next());
+				retval.add(rnode);
+			}
+		}
+		return retval;
+	}
 
 	@Override
 	public Set<SemanticNode<?>> getInReach(SemanticNode<?> node) {
@@ -398,11 +417,12 @@ public class SemJGraphT implements  SemGraph, Serializable{
 		return color;
 	}
 	
-	public JFrame display(){
+	public JFrame display(String nameOfGraph){
 		JGraphXAdapter<SemanticNode<?>, SemanticEdge> jgxAdapter = new JGraphXAdapter<SemanticNode<?>, SemanticEdge>(graph);
 		mxGraphComponent component = new mxGraphComponent(jgxAdapter);
 		component.setConnectable(false);
 		component.getGraph().setAllowDanglingEdges(false);
+		
 		mxHierarchicalLayout layout = new mxHierarchicalLayout(jgxAdapter);
 		layout.setIntraCellSpacing(80);
 		//layout.setFineTuning(true);
@@ -422,19 +442,24 @@ public class SemJGraphT implements  SemGraph, Serializable{
 				component.getGraph().setCellStyles(mxConstants.STYLE_FILLCOLOR, "#B2B2B2", new Object[]{node});
 				component.getGraph().setCellStyles(mxConstants.STYLE_STROKECOLOR, "#B2B2B2", new Object[]{node});
 			} else if (((mxCell) node).getValue() instanceof ValueNode){
-				component.getGraph().setCellStyles(mxConstants.STYLE_FILLCOLOR, "#B2B2FF", new Object[]{node});
-				component.getGraph().setCellStyles(mxConstants.STYLE_STROKECOLOR, "#B2B2FF", new Object[]{node});
+				component.getGraph().setCellStyles(mxConstants.STYLE_FILLCOLOR, "#32CD32", new Object[]{node});
+				component.getGraph().setCellStyles(mxConstants.STYLE_STROKECOLOR, "#32CD32", new Object[]{node}); // B2B2FF
 			} else if (((mxCell) node).getValue() instanceof TermNode){
 				component.getGraph().setCellStyles(mxConstants.STYLE_FILLCOLOR, "#FFA500", new Object[]{node});
-				component.getGraph().setCellStyles(mxConstants.STYLE_STROKECOLOR, "#FFA500", new Object[]{node});
-			} else {
+				component.getGraph().setCellStyles(mxConstants.STYLE_STROKECOLOR, "#FFA500", new Object[]{node});		
+			} else if (((mxCell) node).getValue() instanceof LinkEdge) {
+				component.getGraph().setCellStyles(mxConstants.STYLE_FILLCOLOR, "#FF7F50", new Object[]{node});
+				component.getGraph().setCellStyles(mxConstants.STYLE_FONTCOLOR, "#FF7F50", new Object[]{node});
+				component.getGraph().setCellStyles(mxConstants.STYLE_STROKECOLOR, "#FF7F50", new Object[]{node});
+			}	
+			else {
 				component.getGraph().setCellStyles(mxConstants.STYLE_FILLCOLOR, "#9CC1A5", new Object[]{node});
 				component.getGraph().setCellStyles(mxConstants.STYLE_STROKECOLOR, "#9CC1A5", new Object[]{node});
 			}
 		}
 		component.refresh();
 			
-		JFrame frame = new JFrame();
+		JFrame frame = new JFrame(nameOfGraph);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);	
 		frame.getContentPane().add(component);
 		//frame.setUndecorated(true);
@@ -460,7 +485,7 @@ public class SemJGraphT implements  SemGraph, Serializable{
 		if (this.graph.vertexSet().isEmpty())
 			return image;
 		// else if graph is full:		
-		JFrame frame = this.display();
+		JFrame frame = this.display("");
 		//frame.setSize(frame.getComponent(0).getSize());
 		// create buffered image and project jframe on it
 		try
