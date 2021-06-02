@@ -74,7 +74,7 @@ to point to the location of the *vocab.txt* file. You will also need to modify t
 
 Download the *glove.6B.zip* from <https://nlp.stanford.edu/projects/glove/> and unzip it. Choose the size of the embedding file you want to work with and copy this file into *GKR_semantic_parser/sem.mapper/src/main/resources/*. The default file chosen is the *glove.6B.300d.txt*. If you choose this file, you don't need to do anything further. If * you choose another size file, you have to also configure the file *GKR_semantic_parser/sem.mapper/src/main/resources/gkr.properties*. In particular you must change the line * ``` glove=../sem.mapper/src/main/resources/glove.6B.300d.txt``` to the name of the file you chose. 
 
-**********************************************
+************* End of Deprecated *************
 
 8. Go back into the cloned directory and find the *build.gradle* file of the *sem.mapper* folder. Change the following line
 ```compile fileTree(dir: '/Users/kkalouli/Documents/libraries/GKR_libs/', include: ['*.jar']) ```
