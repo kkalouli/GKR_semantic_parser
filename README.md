@@ -64,16 +64,17 @@ Change the location and set the location path in which you installed the parent 
 - the *maxent-3.0.0.jar* file (found in the folder *dist/lib/* of your JIGSAW installation)
 - *opennlp-tools-1.5.0.jar* (found in the folder *dist/lib/* of your JIGSAW installation)
 
-7. The GKR parser uses the easy-bert software by Rob Rua (https://zenodo.org/record/2652964#.X6pxb5NKjR0). The software is imported through gradle and the bert vocabulary file for the BERT uncases model is already provided in *sem.mapper/src/main/resources/vocab.txt* . If you wish to use a different model,  you will need to download the desired model from https://github.com/robrua/easy-bert and unzip it. Once you unzip it, you will see a file *vocab.txt* within the folder. You will need to configure the file *GKR_semantic_parser/sem.mapper/src/main/resources/gkr.properties* and in particular, change the following line:
+7. The GKR parser uses the easy-bert software by Rob Rua (https://zenodo.org/record/2652964#.X6pxb5NKjR0). The software is imported through gradle and the bert vocabulary file for the BERT uncased model is already provided in *sem.mapper/src/main/resources/vocab.txt* . If you wish to use a different model,  you will need to download the desired model from https://github.com/robrua/easy-bert and unzip it. Once you unzip it, you will see a file *vocab.txt* within the folder. You will need to configure the file *GKR_semantic_parser/sem.mapper/src/main/resources/gkr.properties* and in particular, change the following line:
 
 ``` bert_vocab=/Users/kkalouli/Documents/project/sem.mapper/src/main/resources/vocab.txt ```  
 
 to point to the location of the *vocab.txt* file. You will also need to modify the *build.gradle* file of sem.mapper to import the model you want (*implementation 'com.robrua.nlp.models:easy-bert-uncased-L-12-H-768-A-12:1.0.0'* )
 
 ************** Deprecated ******************
+
 Download the *glove.6B.zip* from <https://nlp.stanford.edu/projects/glove/> and unzip it. Choose the size of the embedding file you want to work with and copy this file into *GKR_semantic_parser/sem.mapper/src/main/resources/*. The default file chosen is the *glove.6B.300d.txt*. If you choose this file, you don't need to do anything further. If * you choose another size file, you have to also configure the file *GKR_semantic_parser/sem.mapper/src/main/resources/gkr.properties*. In particular you must change the line * ``` glove=../sem.mapper/src/main/resources/glove.6B.300d.txt``` to the name of the file you chose. 
 
-
+**********************************************
 
 8. Go back into the cloned directory and find the *build.gradle* file of the *sem.mapper* folder. Change the following line
 ```compile fileTree(dir: '/Users/kkalouli/Documents/libraries/GKR_libs/', include: ['*.jar']) ```
