@@ -28,7 +28,7 @@ Copyright 2018 Aikaterini-Lida Kalouli and Richard Crouch. GKR is a free-softwar
 
 1. Clone the repository into your desired directory: ``` git clone https://github.com/kkalouli/GKR_semantic_parser.git ```
 
-2.  Download WordNet from http://wordnet.princeton.edu/wordnet/download/.
+2.  Download WordNet from https://wordnet.princeton.edu/download.
 In order to use WordNet, you must configure the file *GKR_semantic_parser/sem.mapper/src/main/resources/gkr.properties*. 
 In particular you must change the following line:
 
