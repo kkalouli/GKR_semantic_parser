@@ -100,7 +100,7 @@ The testsuite used in our paper *Kalouli, A.-L. and Richard Crouch. 2018. GKR: t
 @ NAACL 2018* (http://aclweb.org/anthology/W18-1304) can be found in the folder *evaluation*. 
 
 # Contact
-For troubleshooting, comments, ideas and discussions, please contact aikaterini-lida.kalouli(at)uni-konstanz.de or dick.crouch(at)gmail.com
+For troubleshooting, comments, ideas and discussions, please contact kalouli(at)cis.lmu.de
 
 
 
