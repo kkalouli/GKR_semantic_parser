@@ -1,11 +1,14 @@
 # About
 
 This is the Graphical Knowledge Representation (GKR) parser. It transforms a given sentence into a layered semantic graph as described
-in *Kalouli, A.-L. and Richard Crouch. 2018. GKR: the Graphical Knowledge Representation for semantic parsing. In Proceedings of SEMBEaR 2018
-@ NAACL 2018* : http://aclweb.org/anthology/W18-1304 
+in *Kalouli, A.-L. and R. Crouch. 2018. GKR: the Graphical Knowledge Representation for semantic parsing. In Proceedings of SEMBEaR 2018
+@NAACL 2018* : http://aclweb.org/anthology/W18-1304 
 
 Companion paper: *Crouch, R. and A.-L. Kalouli. 2018. Named Graphs for Semantic Representations. In Proceedings of \*SEM 2018
-@ NAACL 2018* : http://aclweb.org/anthology/S18-2013 
+@NAACL 2018* : http://aclweb.org/anthology/S18-2013 
+
+Application paper: *Kalouli, A.-L., R. Crouch and V. de Paiva. GKR: Bridging the gap between symbolic/structural and distributional meaning representations. In
+Proceedings of the 1st International Workshop on Designing Meaning Representations @ ACL 2019* : https://www.aclweb.org/anthology/W19-3305/
 
 Author/developer: Aikaterini-Lida Kalouli (<aikaterini-lida.kalouli@uni-konstanz.de>) and Richard Crouch (<dick.crouch@gmail.com>)
 
@@ -14,7 +17,7 @@ software in any other medium serving scientists or students (e.g. web-sites,
 CD-ROMs) please include the above citation.
 
 # Demo
-If you would like to have a quick sense of how GKR looks like, check out our online demo: http://lap0973.sprachwiss.uni-konstanz.de:8080/sem.mapper/
+If you would like to have a quick sense of how GKR looks like, check out our online demo: http://gkrparser.nlitoolkit.de/
 
 # License
 Copyright 2018 Aikaterini-Lida Kalouli and Richard Crouch. GKR is a free-software discributed under the conditions of the Apache License 2.0, without warranty. See LICENSE file for more details. You should have received a copy of the LICENSE file with the source code. If not, please visit http://www.apache.org/licenses/ for more information. 
@@ -25,7 +28,7 @@ Copyright 2018 Aikaterini-Lida Kalouli and Richard Crouch. GKR is a free-softwar
 
 1. Clone the repository into your desired directory: ``` git clone https://github.com/kkalouli/GKR_semantic_parser.git ```
 
-2.  Download WordNet from http://wordnet.princeton.edu/wordnet/download/.
+2.  Download WordNet from https://wordnet.princeton.edu/download.
 In order to use WordNet, you must configure the file *GKR_semantic_parser/sem.mapper/src/main/resources/gkr.properties*. 
 In particular you must change the following line:
 
@@ -61,16 +64,17 @@ Change the location and set the location path in which you installed the parent 
 - the *maxent-3.0.0.jar* file (found in the folder *dist/lib/* of your JIGSAW installation)
 - *opennlp-tools-1.5.0.jar* (found in the folder *dist/lib/* of your JIGSAW installation)
 
-7. The GKR parser uses the easy-bert software by Rob Rua (https://zenodo.org/record/2652964#.X6pxb5NKjR0). Although the software is imported through gradle, you will need to download the uncased, BERT model from https://github.com/robrua/easy-bert and unzip it. Once you unzip it, you will see a file *vocab.txt* within the folder. Configure the file *GKR_semantic_parser/sem.mapper/src/main/resources/gkr.properties* and in particular, change the following line:
+7. The GKR parser uses the easy-bert software by Rob Rua (https://zenodo.org/record/2652964#.X6pxb5NKjR0). The software is imported through gradle and the bert vocabulary file for the BERT uncased model is already provided in *sem.mapper/src/main/resources/vocab.txt* . If you wish to use a different model,  you will need to download the desired model from https://github.com/robrua/easy-bert and unzip it. Once you unzip it, you will see a file *vocab.txt* within the folder. You will need to configure the file *GKR_semantic_parser/sem.mapper/src/main/resources/gkr.properties* and in particular, change the following line:
 
 ``` bert_vocab=/Users/kkalouli/Documents/project/sem.mapper/src/main/resources/vocab.txt ```  
 
-to point to the location of the *vocab.txt* file (if you want to use a different BERT model, make sure to download the model you want and then point the *gkr.properties* file to the location of its *vocab.txt* file. If you choose a different model, you will also need to modify the *build.gradle* file of sem.mapper to import the model you want *implementation 'com.robrua.nlp.models:easy-bert-uncased-L-12-H-768-A-12:1.0.0'* )
+to point to the location of the *vocab.txt* file. You will also need to modify the *build.gradle* file of sem.mapper to import the model you want (*implementation 'com.robrua.nlp.models:easy-bert-uncased-L-12-H-768-A-12:1.0.0'* )
 
 ************** Deprecated ******************
+
 Download the *glove.6B.zip* from <https://nlp.stanford.edu/projects/glove/> and unzip it. Choose the size of the embedding file you want to work with and copy this file into *GKR_semantic_parser/sem.mapper/src/main/resources/*. The default file chosen is the *glove.6B.300d.txt*. If you choose this file, you don't need to do anything further. If * you choose another size file, you have to also configure the file *GKR_semantic_parser/sem.mapper/src/main/resources/gkr.properties*. In particular you must change the line * ``` glove=../sem.mapper/src/main/resources/glove.6B.300d.txt``` to the name of the file you chose. 
 
-
+************* End of Deprecated *************
 
 8. Go back into the cloned directory and find the *build.gradle* file of the *sem.mapper* folder. Change the following line
 ```compile fileTree(dir: '/Users/kkalouli/Documents/libraries/GKR_libs/', include: ['*.jar']) ```
@@ -96,7 +100,7 @@ The testsuite used in our paper *Kalouli, A.-L. and Richard Crouch. 2018. GKR: t
 @ NAACL 2018* (http://aclweb.org/anthology/W18-1304) can be found in the folder *evaluation*. 
 
 # Contact
-For troubleshooting, comments, ideas and discussions, please contact aikaterini-lida.kalouli(at)uni-konstanz.de or dick.crouch(at)gmail.com
+For troubleshooting, comments, ideas and discussions, please contact kalouli(at)cis.lmu.de
 
 
 
